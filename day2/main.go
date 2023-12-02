@@ -11,6 +11,7 @@ import (
 
 func main() {
 	part1()
+	part2()
 }
 
 type Cards struct {
@@ -33,11 +34,33 @@ func part1() {
 	fmt.Println(sum)
 }
 
+func part2() {
+	f, err := os.Open("./input.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	sum := Part2GetSum(scanner)
+	fmt.Println(sum)
+}
+
 func Part1GetSum(scanner *bufio.Scanner, cardsMaxValues Cards) int {
 	sum := 0
 	for scanner.Scan() {
 		s := scanner.Text()
 		sum += Part1ParseGame(s, cardsMaxValues)
+	}
+	return sum
+}
+
+func Part2GetSum(scanner *bufio.Scanner) int {
+	sum := 0
+	for scanner.Scan() {
+		s := scanner.Text()
+		sum += Part2ParseGame(s)
 	}
 	return sum
 }
@@ -80,4 +103,30 @@ func Part1ParseGame(str string, cardsMaxValues Cards) int {
 		}
 	}
 	return gameId
+}
+
+func Part2ParseGame(str string) int {
+	gameAndSteps := strings.Split(str, ":")
+	acc := Cards{}
+	steps := strings.Split(strings.Trim(gameAndSteps[1], " "), ";")
+	for _, step := range steps {
+		cards := strings.Split(strings.Trim(step, " "), ",")
+		for _, card := range cards {
+			cntAndCardName := strings.Split(strings.Trim(card, " "), " ")
+			name := strings.Trim(cntAndCardName[1], " ")
+			cnt, err := strconv.Atoi(cntAndCardName[0])
+			if err != nil {
+				panic(err)
+			}
+			switch name {
+			case "blue":
+				acc.blue = int(math.Max(float64(acc.blue), float64(cnt)))
+			case "green":
+				acc.green = int(math.Max(float64(acc.green), float64(cnt)))
+			case "red":
+				acc.red = int(math.Max(float64(acc.red), float64(cnt)))
+			}
+		}
+	}
+	return acc.blue * acc.green * acc.red
 }
