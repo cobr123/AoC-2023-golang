@@ -14,7 +14,7 @@ func main() {
 }
 
 func part1() {
-	f, err := os.Open("./input1.txt")
+	f, err := os.Open("./input.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -27,7 +27,7 @@ func part1() {
 }
 
 func part2() {
-	f, err := os.Open("./input2.txt")
+	f, err := os.Open("./input.txt")
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func part2() {
 
 	scanner := bufio.NewScanner(f)
 
-	sum := Part1GetMargin(scanner)
+	sum := Part2GetMargin(scanner)
 	fmt.Println(sum)
 }
 
@@ -60,6 +60,43 @@ func Part1GetMargin(scanner *bufio.Scanner) int {
 		} else if strings.HasPrefix(s, "Distance:") {
 			nameAndNumbers := strings.Split(s, ":")
 			numbers := strings.Split(strings.Trim(nameAndNumbers[1], " "), " ")
+			for _, item := range numbers {
+				n, err := strconv.Atoi(item)
+				if err != nil {
+					panic(err)
+				}
+				distances = append(distances, n)
+			}
+		} else {
+			panic(s)
+		}
+
+	}
+	margin := 1
+	for i := 0; i < len(times); i++ {
+		margin *= getNumberOfWays(times[i], distances[i])
+	}
+	return margin
+}
+
+func Part2GetMargin(scanner *bufio.Scanner) int {
+	times := []int{}
+	distances := []int{}
+	for scanner.Scan() {
+		s := strings.ReplaceAll(scanner.Text(), " ", "")
+		if strings.HasPrefix(s, "Time:") {
+			nameAndNumbers := strings.Split(s, ":")
+			numbers := strings.Split(nameAndNumbers[1], " ")
+			for _, item := range numbers {
+				n, err := strconv.Atoi(item)
+				if err != nil {
+					panic(err)
+				}
+				times = append(times, n)
+			}
+		} else if strings.HasPrefix(s, "Distance:") {
+			nameAndNumbers := strings.Split(s, ":")
+			numbers := strings.Split(nameAndNumbers[1], " ")
 			for _, item := range numbers {
 				n, err := strconv.Atoi(item)
 				if err != nil {
