@@ -316,12 +316,19 @@ func Part2GetEnclosedTilesCnt(scanner *bufio.Scanner) int {
 		}
 		fmt.Println("")
 	}
-	w := len(tiles[0])
-	h := len(tiles)
-	ground -= MarkOutsideGroud(Pos{0, 0}, &tiles, w, h)
-	ground -= MarkOutsideGroud(Pos{w - 1, 0}, &tiles, w, h)
-	ground -= MarkOutsideGroud(Pos{0, h - 1}, &tiles, w, h)
-	ground -= MarkOutsideGroud(Pos{w - 1, h - 1}, &tiles, w, h)
+
+	for i := 0; i < len(tiles[0]); i++ {
+		ground -= MarkOutsideGround(Pos{i, 0}, &tiles)
+	}
+	for i := 0; i < len(tiles[0]); i++ {
+		ground -= MarkOutsideGround(Pos{i, len(tiles) - 1}, &tiles)
+	}
+	for i := 0; i < len(tiles); i++ {
+		ground -= MarkOutsideGround(Pos{0, i}, &tiles)
+	}
+	for i := 0; i < len(tiles); i++ {
+		ground -= MarkOutsideGround(Pos{len(tiles[0]) - 1, i}, &tiles)
+	}
 	fmt.Println("---")
 	for _, row := range tiles {
 		for _, col := range row {
@@ -333,32 +340,65 @@ func Part2GetEnclosedTilesCnt(scanner *bufio.Scanner) int {
 	return ground
 }
 
-func MarkOutsideGroud(pos Pos, tiles *[][]Tile, w, h int) int {
+func MarkOutsideGround(pos Pos, tiles *[][]Tile) int {
+	cnt := 0
 	toLeft := Pos{pos.x - 1, pos.y}
 	toRight := Pos{pos.x + 1, pos.y}
 	toUp := Pos{pos.x, pos.y - 1}
+	toUpLeft := Pos{pos.x - 1, pos.y - 1}
+	toUpRight := Pos{pos.x + 1, pos.y - 1}
 	toDown := Pos{pos.x, pos.y + 1}
 
-	cnt := 0
+	if pos.y < len((*tiles))-1 && toUp.y > 0 && (*tiles)[toUp.y][toUp.x] == L && toUpLeft.y > 0 && toUpLeft.x > 0 && (*tiles)[toUpLeft.y][toUpLeft.x] != Dot && (*tiles)[toUpLeft.y][toUpLeft.x] != ZERO {
+		cnt -= AddCol(pos.x, tiles)
+	}
+	if toUp.y > 0 && (*tiles)[toUp.y][toUp.x] == J && toUpRight.y > 0 && toUpRight.x < len((*tiles)[0])-1 && (*tiles)[toUpRight.y][toUpRight.x] != Dot && (*tiles)[toUpRight.y][toUpRight.x] != ZERO {
+		cnt -= AddCol(pos.x+1, tiles)
+	}
 	if pos.x >= 0 && (*tiles)[pos.y][pos.x] == Dot {
 		(*tiles)[pos.y][pos.x] = ZERO
 		cnt += 1
 	}
 	if toLeft.x >= 0 && (*tiles)[toLeft.y][toLeft.x] == Dot {
 		(*tiles)[toLeft.y][toLeft.x] = ZERO
-		cnt += 1 + MarkOutsideGroud(toLeft, tiles, w, h)
+		cnt += 1 + MarkOutsideGround(toLeft, tiles)
 	}
-	if toRight.x < w && (*tiles)[toRight.y][toRight.x] == Dot {
+	if toRight.x < len((*tiles)[0]) && (*tiles)[toRight.y][toRight.x] == Dot {
 		(*tiles)[toRight.y][toRight.x] = ZERO
-		cnt += 1 + MarkOutsideGroud(toRight, tiles, w, h)
+		cnt += 1 + MarkOutsideGround(toRight, tiles)
 	}
 	if toUp.y >= 0 && (*tiles)[toUp.y][toUp.x] == Dot {
 		(*tiles)[toUp.y][toUp.x] = ZERO
-		cnt += 1 + MarkOutsideGroud(toUp, tiles, w, h)
+		cnt += 1 + MarkOutsideGround(toUp, tiles)
 	}
-	if toDown.y < h && (*tiles)[toDown.y][toDown.x] == Dot {
+	if toDown.y < len(*tiles) && (*tiles)[toDown.y][toDown.x] == Dot {
 		(*tiles)[toDown.y][toDown.x] = ZERO
-		cnt += 1 + MarkOutsideGroud(toDown, tiles, w, h)
+		cnt += 1 + MarkOutsideGround(toDown, tiles)
 	}
 	return cnt
+}
+
+func AddCol(colIdx int, tiles *[][]Tile) int {
+	dotsAdded := 0
+	for y, row := range *tiles {
+		line := []Tile{}
+		for x, col := range row {
+			if x == colIdx {
+				switch col {
+				case Minus:
+					line = append(line, Minus)
+				default:
+					line = append(line, Dot)
+					dotsAdded++
+				}
+			}
+			line = append(line, col)
+		}
+		(*tiles)[y] = line
+	}
+	return dotsAdded
+}
+
+func AddRow(rowIdx int, tiles *[][]Tile) {
+
 }
