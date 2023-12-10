@@ -2,16 +2,17 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"math"
 	"os"
-	"strconv"
 )
 
 func main() {
 	part1()
 }
 
-type Tile int8
+type Tile string
 
 const (
 	// | is a vertical pipe connecting north and south.
@@ -22,14 +23,14 @@ const (
 	// F is a 90-degree bend connecting south and east.
 	// . is ground; there is no pipe in this tile.
 	// S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
-	Pipe Tile = iota
-	Minus
-	L
-	J
-	Seven
-	F
-	Dot
-	S
+	Pipe  Tile = "|"
+	Minus      = "-"
+	L          = "L"
+	J          = "J"
+	Seven      = "7"
+	F          = "F"
+	Dot        = "."
+	S          = "S"
 )
 
 func part1() {
@@ -41,8 +42,8 @@ func part1() {
 
 	scanner := bufio.NewScanner(f)
 
-	res := Part1GetMid(scanner)
-	fmt.Println(res)
+	result := Part1GetMid(scanner)
+	fmt.Println(result)
 }
 
 func Part1GetMid(scanner *bufio.Scanner) int {
@@ -94,48 +95,134 @@ func Part1FindPaths(tiles [][]Tile, pos Pos) int {
 	toUp := Pos{pos.x, pos.y - 1}
 	toDown := Pos{pos.x, pos.y + 1}
 
-	if toLeft.x >= 0 && tiles[toLeft.y][toLeft.x] == Minus {
-		return stepToTheLeft(tiles, pos, 0)
-	} else if toLeft.x >= 0 && tiles[toLeft.y][toLeft.x] == F {
-		return stepToTheLeftAndDownward(tiles, pos, 0)
-	} else if toLeft.x >= 0 && tiles[toLeft.y][toLeft.x] == L {
-		return stepToTheLeftAndUpward(tiles, pos, 0)
-	} else if toRight.x < width && tiles[toRight.y][toRight.x] == Minus {
-		return stepToTheRight(tiles, pos, 0)
-	} else if toRight.x < width && tiles[toRight.y][toRight.x] == Seven {
-		return stepToTheRightAndDownward(tiles, pos, 0)
-	} else if toRight.x < width && tiles[toRight.y][toRight.x] == J {
-		return stepToTheRightAndUpward(tiles, pos, 0)
-	} else if toUp.y >= 0 && tiles[toUp.y][toUp.x] == Pipe {
-		return stepToTheUpward(tiles, pos, 0)
-	} else if toUp.y >= 0 && tiles[toUp.y][toUp.x] == Seven {
-		return stepToTheUpwardAndLeft(tiles, pos, 0)
-	} else if toUp.y >= 0 && tiles[toUp.y][toUp.x] == F {
-		return stepToTheUpwardAndRight(tiles, pos, 0)
-	} else if toDown.y < height && tiles[toDown.y][toDown.x] == Pipe {
-		return stepToTheDownward(tiles, pos, 0)
-	} else if toDown.y < height && tiles[toDown.y][toDown.x] == L {
-		return stepToTheDownwardAndRight(tiles, pos, 0)
-	} else if toDown.y < height && tiles[toDown.y][toDown.x] == J {
-		return stepToTheDownwardAndLeft(tiles, pos, 0)
+	result := -1
+	if toLeft.x >= 0 {
+		switch tiles[toLeft.y][toLeft.x] {
+		case Minus:
+			tmp, err := stepToTheLeft(tiles, toLeft, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("found", tmp, "onTheLeft")
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case F:
+			tmp, err := stepToTheLeftAndDownward(tiles, toLeft, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("found", tmp, "onTheDownward")
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case L:
+			tmp, err := stepToTheLeftAndUpward(tiles, toLeft, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("found", tmp, "onTheUpward")
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		}
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	if toRight.x < width {
+		switch tiles[toRight.y][toRight.x] {
+		case Minus:
+			tmp, err := stepToTheRight(tiles, toRight, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("found", tmp, "onTheRight")
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case Seven:
+			tmp, err := stepToTheRightAndDownward(tiles, toRight, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("found", tmp, "onTheRightAndDownward")
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case J:
+			tmp, err := stepToTheRightAndUpward(tiles, toRight, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				fmt.Println("found", tmp, "onTheRightAndUpward")
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		}
+	}
+	if toUp.y >= 0 {
+		switch tiles[toUp.y][toUp.x] {
+		case Pipe:
+			tmp, err := stepToTheUpward(tiles, toUp, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case Seven:
+			tmp, err := stepToTheUpwardAndLeft(tiles, toUp, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case F:
+			tmp, err := stepToTheUpwardAndRight(tiles, toUp, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		}
+	}
+	if toDown.y < height {
+		switch tiles[toDown.y][toDown.x] {
+		case Pipe:
+			tmp, err := stepToTheDownward(tiles, toDown, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case L:
+			tmp, err := stepToTheDownwardAndRight(tiles, toDown, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		case J:
+			tmp, err := stepToTheDownwardAndLeft(tiles, toDown, 1)
+			if err != nil {
+				fmt.Println(err.Error())
+			} else {
+				result = int(math.Max(float64(result), float64(tmp)))
+			}
+		}
+	}
+	return result
 }
 
-func stepToTheLeft(tiles [][]Tile, pos Pos, stepCount int) int {
-	pos.x -= 2
+func stepToTheLeft(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheLeft", tiles[pos.y][pos.x])
+	pos.x -= 1
 	switch tiles[pos.y][pos.x] {
+	case Minus:
+		return stepToTheLeft(tiles, pos, stepCount+1)
 	case F:
-		return stepToTheDownward(tiles, pos, stepCount+2)
+		return stepToTheDownward(tiles, pos, stepCount+1)
 	case L:
-		return stepToTheUpward(tiles, pos, stepCount+2)
+		return stepToTheUpward(tiles, pos, stepCount+1)
 	case S:
-		return stepCount + 2
+		return stepCount + 1, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheLeftAndUpward(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheLeftAndUpward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheLeftAndUpward", tiles[pos.y][pos.x])
 	pos.x -= 1
 	pos.y -= 1
 	switch tiles[pos.y][pos.x] {
@@ -144,12 +231,13 @@ func stepToTheLeftAndUpward(tiles [][]Tile, pos Pos, stepCount int) int {
 	case L:
 		return stepToTheUpward(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheLeftAndDownward(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheLeftAndDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheLeftAndDownward", tiles[pos.y][pos.x])
 	pos.x -= 1
 	pos.y += 1
 	switch tiles[pos.y][pos.x] {
@@ -158,25 +246,29 @@ func stepToTheLeftAndDownward(tiles [][]Tile, pos Pos, stepCount int) int {
 	case L:
 		return stepToTheUpward(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheRight(tiles [][]Tile, pos Pos, stepCount int) int {
-	pos.x += 2
+func stepToTheRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheRight", tiles[pos.y][pos.x])
+	pos.x += 1
 	switch tiles[pos.y][pos.x] {
+	case Minus:
+		return stepToTheRight(tiles, pos, stepCount+1)
 	case Seven:
-		return stepToTheDownward(tiles, pos, stepCount+2)
+		return stepToTheDownward(tiles, pos, stepCount+1)
 	case J:
-		return stepToTheUpward(tiles, pos, stepCount+2)
+		return stepToTheUpward(tiles, pos, stepCount+1)
 	case S:
-		return stepCount + 2
+		return stepCount + 1, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheRightAndUpward(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheRightAndUpward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheRightAndUpward", tiles[pos.y][pos.x])
 	pos.x += 1
 	pos.y -= 1
 	switch tiles[pos.y][pos.x] {
@@ -185,12 +277,13 @@ func stepToTheRightAndUpward(tiles [][]Tile, pos Pos, stepCount int) int {
 	case J:
 		return stepToTheUpward(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheRightAndDownward(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheRightAndDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheRightAndDownward", tiles[pos.y][pos.x])
 	pos.x += 1
 	pos.y += 1
 	switch tiles[pos.y][pos.x] {
@@ -199,25 +292,29 @@ func stepToTheRightAndDownward(tiles [][]Tile, pos Pos, stepCount int) int {
 	case J:
 		return stepToTheUpward(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheUpward(tiles [][]Tile, pos Pos, stepCount int) int {
-	pos.y -= 2
+func stepToTheUpward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheUpward", tiles[pos.y][pos.x])
+	pos.y -= 1
 	switch tiles[pos.y][pos.x] {
+	case Pipe:
+		return stepToTheUpward(tiles, pos, stepCount+1)
 	case F:
-		return stepToTheRight(tiles, pos, stepCount+2)
+		return stepToTheRight(tiles, pos, stepCount+1)
 	case Seven:
-		return stepToTheLeft(tiles, pos, stepCount+2)
+		return stepToTheLeft(tiles, pos, stepCount+1)
 	case S:
-		return stepCount + 2
+		return stepCount + 1, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheUpwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheUpwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheUpwardAndLeft", tiles[pos.y][pos.x])
 	pos.y -= 1
 	pos.x -= 1
 	switch tiles[pos.y][pos.x] {
@@ -226,12 +323,13 @@ func stepToTheUpwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) int {
 	case Seven:
 		return stepToTheLeft(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheUpwardAndRight(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheUpwardAndRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheUpwardAndRight", tiles[pos.y][pos.x])
 	pos.y -= 1
 	pos.x += 1
 	switch tiles[pos.y][pos.x] {
@@ -240,25 +338,29 @@ func stepToTheUpwardAndRight(tiles [][]Tile, pos Pos, stepCount int) int {
 	case Seven:
 		return stepToTheLeft(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheDownward(tiles [][]Tile, pos Pos, stepCount int) int {
-	pos.y += 2
+func stepToTheDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheDownward", tiles[pos.y][pos.x])
+	pos.y += 1
 	switch tiles[pos.y][pos.x] {
+	case Pipe:
+		return stepToTheDownward(tiles, pos, stepCount+1)
 	case L:
-		return stepToTheRight(tiles, pos, stepCount+2)
+		return stepToTheRight(tiles, pos, stepCount+1)
 	case J:
-		return stepToTheLeft(tiles, pos, stepCount+2)
+		return stepToTheLeft(tiles, pos, stepCount+1)
 	case S:
-		return stepCount + 2
+		return stepCount + 1, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheDownwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheDownwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheDownwardAndLeft", tiles[pos.y][pos.x])
 	pos.y += 1
 	pos.x -= 1
 	switch tiles[pos.y][pos.x] {
@@ -267,12 +369,13 @@ func stepToTheDownwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) int {
 	case J:
 		return stepToTheLeft(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheDownwardAndRight(tiles [][]Tile, pos Pos, stepCount int) int {
+func stepToTheDownwardAndRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
+	fmt.Println("stepToTheDownwardAndRight", tiles[pos.y][pos.x])
 	pos.y += 1
 	pos.x += 1
 	switch tiles[pos.y][pos.x] {
@@ -281,7 +384,7 @@ func stepToTheDownwardAndRight(tiles [][]Tile, pos Pos, stepCount int) int {
 	case J:
 		return stepToTheLeft(tiles, pos, stepCount+2)
 	case S:
-		return stepCount + 2
+		return stepCount + 2, nil
 	}
-	panic("undefined step: " + strconv.Itoa(int(tiles[pos.y][pos.x])))
+	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
