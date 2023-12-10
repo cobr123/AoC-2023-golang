@@ -10,7 +10,6 @@ import (
 
 func main() {
 	part1()
-	//2093
 }
 
 type Tile string
@@ -72,7 +71,7 @@ func Part1GetMid(scanner *bufio.Scanner) int {
 				line = append(line, Dot)
 			case 'S':
 				line = append(line, S)
-				currentPos = Pos{x, y}
+				currentPos = Pos{y, x}
 			}
 		}
 		tiles = append(tiles, line)
@@ -88,6 +87,7 @@ type Pos struct {
 }
 
 func Part1FindPaths(tiles [][]Tile, pos Pos) int {
+	fmt.Println("Part1FindPaths", tiles[pos.y][pos.x])
 	width := len(tiles[0])
 	height := len(tiles)
 
