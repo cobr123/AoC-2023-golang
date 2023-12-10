@@ -10,6 +10,7 @@ import (
 
 func main() {
 	part1()
+	//2093
 }
 
 type Tile string
@@ -107,7 +108,7 @@ func Part1FindPaths(tiles [][]Tile, pos Pos) int {
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case F:
-			tmp, err := stepToTheLeftAndDownward(tiles, toLeft, 1)
+			tmp, err := stepToTheDownward(tiles, toLeft, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
@@ -115,7 +116,7 @@ func Part1FindPaths(tiles [][]Tile, pos Pos) int {
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case L:
-			tmp, err := stepToTheLeftAndUpward(tiles, toLeft, 1)
+			tmp, err := stepToTheUpward(tiles, toLeft, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
@@ -135,19 +136,19 @@ func Part1FindPaths(tiles [][]Tile, pos Pos) int {
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case Seven:
-			tmp, err := stepToTheRightAndDownward(tiles, toRight, 1)
+			tmp, err := stepToTheDownward(tiles, toRight, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
-				fmt.Println("found", tmp, "onTheRightAndDownward")
+				fmt.Println("found", tmp, "onTheDownward")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case J:
-			tmp, err := stepToTheRightAndUpward(tiles, toRight, 1)
+			tmp, err := stepToTheUpward(tiles, toRight, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
-				fmt.Println("found", tmp, "onTheRightAndUpward")
+				fmt.Println("found", tmp, "onTheUpward")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		}
@@ -159,20 +160,23 @@ func Part1FindPaths(tiles [][]Tile, pos Pos) int {
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				fmt.Println("found", tmp, "onTheUpward")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case Seven:
-			tmp, err := stepToTheUpwardAndLeft(tiles, toUp, 1)
+			tmp, err := stepToTheLeft(tiles, toUp, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				fmt.Println("found", tmp, "onTheLeft")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case F:
-			tmp, err := stepToTheUpwardAndRight(tiles, toUp, 1)
+			tmp, err := stepToTheRight(tiles, toUp, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				fmt.Println("found", tmp, "onTheRight")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		}
@@ -184,20 +188,23 @@ func Part1FindPaths(tiles [][]Tile, pos Pos) int {
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				fmt.Println("found", tmp, "onTheDownward")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case L:
-			tmp, err := stepToTheDownwardAndRight(tiles, toDown, 1)
+			tmp, err := stepToTheRight(tiles, toDown, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				fmt.Println("found", tmp, "onTheRight")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		case J:
-			tmp, err := stepToTheDownwardAndLeft(tiles, toDown, 1)
+			tmp, err := stepToTheLeft(tiles, toDown, 1)
 			if err != nil {
 				fmt.Println(err.Error())
 			} else {
+				fmt.Println("found", tmp, "onTheLeft")
 				result = int(math.Max(float64(result), float64(tmp)))
 			}
 		}
@@ -221,36 +228,6 @@ func stepToTheLeft(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
 	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheLeftAndUpward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheLeftAndUpward", tiles[pos.y][pos.x])
-	pos.x -= 1
-	pos.y -= 1
-	switch tiles[pos.y][pos.x] {
-	case F:
-		return stepToTheDownward(tiles, pos, stepCount+2)
-	case L:
-		return stepToTheUpward(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
-func stepToTheLeftAndDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheLeftAndDownward", tiles[pos.y][pos.x])
-	pos.x -= 1
-	pos.y += 1
-	switch tiles[pos.y][pos.x] {
-	case F:
-		return stepToTheDownward(tiles, pos, stepCount+2)
-	case L:
-		return stepToTheUpward(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
 func stepToTheRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
 	fmt.Println("stepToTheRight", tiles[pos.y][pos.x])
 	pos.x += 1
@@ -263,36 +240,6 @@ func stepToTheRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
 		return stepToTheUpward(tiles, pos, stepCount+1)
 	case S:
 		return stepCount + 1, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
-func stepToTheRightAndUpward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheRightAndUpward", tiles[pos.y][pos.x])
-	pos.x += 1
-	pos.y -= 1
-	switch tiles[pos.y][pos.x] {
-	case Seven:
-		return stepToTheDownward(tiles, pos, stepCount+2)
-	case J:
-		return stepToTheUpward(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
-func stepToTheRightAndDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheRightAndDownward", tiles[pos.y][pos.x])
-	pos.x += 1
-	pos.y += 1
-	switch tiles[pos.y][pos.x] {
-	case Seven:
-		return stepToTheDownward(tiles, pos, stepCount+2)
-	case J:
-		return stepToTheUpward(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
 	}
 	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
@@ -313,36 +260,6 @@ func stepToTheUpward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
 	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
 
-func stepToTheUpwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheUpwardAndLeft", tiles[pos.y][pos.x])
-	pos.y -= 1
-	pos.x -= 1
-	switch tiles[pos.y][pos.x] {
-	case F:
-		return stepToTheRight(tiles, pos, stepCount+2)
-	case Seven:
-		return stepToTheLeft(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
-func stepToTheUpwardAndRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheUpwardAndRight", tiles[pos.y][pos.x])
-	pos.y -= 1
-	pos.x += 1
-	switch tiles[pos.y][pos.x] {
-	case F:
-		return stepToTheRight(tiles, pos, stepCount+2)
-	case Seven:
-		return stepToTheLeft(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
 func stepToTheDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
 	fmt.Println("stepToTheDownward", tiles[pos.y][pos.x])
 	pos.y += 1
@@ -355,36 +272,6 @@ func stepToTheDownward(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
 		return stepToTheLeft(tiles, pos, stepCount+1)
 	case S:
 		return stepCount + 1, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
-func stepToTheDownwardAndLeft(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheDownwardAndLeft", tiles[pos.y][pos.x])
-	pos.y += 1
-	pos.x -= 1
-	switch tiles[pos.y][pos.x] {
-	case L:
-		return stepToTheRight(tiles, pos, stepCount+2)
-	case J:
-		return stepToTheLeft(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
-	}
-	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
-}
-
-func stepToTheDownwardAndRight(tiles [][]Tile, pos Pos, stepCount int) (int, error) {
-	fmt.Println("stepToTheDownwardAndRight", tiles[pos.y][pos.x])
-	pos.y += 1
-	pos.x += 1
-	switch tiles[pos.y][pos.x] {
-	case L:
-		return stepToTheRight(tiles, pos, stepCount+2)
-	case J:
-		return stepToTheLeft(tiles, pos, stepCount+2)
-	case S:
-		return stepCount + 2, nil
 	}
 	return 0, errors.New("undefined step: " + string(tiles[pos.y][pos.x]))
 }
