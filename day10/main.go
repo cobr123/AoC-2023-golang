@@ -24,16 +24,36 @@ const (
 	// F is a 90-degree bend connecting south and east.
 	// . is ground; there is no pipe in this tile.
 	// S is the starting position of the animal; there is a pipe on this tile, but your sketch doesn't show what shape the pipe has.
-	Pipe  Tile = "|"
-	Minus      = "-"
-	L          = "L"
-	J          = "J"
-	Seven      = "7"
-	F          = "F"
-	Dot        = "."
-	S          = "S"
-	ZERO       = "0"
-	ADDED      = "+"
+	BottomToTop   Tile = "↑" // "|"
+	TopToBottom        = "↓" // "|"
+	RightToLeft        = "←" // "-"
+	LeftToRight        = "→" // "-"
+	TopToRight         = "→" // "L"
+	RightToTop         = "↑" // "L"
+	TopToLeft          = "←" // "J"
+	LeftToTop          = "↑" // "J"
+	LeftToBottom       = "↓" // "7"
+	BottomToLeft       = "←" // "7"
+	RightToBottom      = "↓" // "F"
+	BottomToRight      = "→" // "F"
+	Dot                = "."
+	S                  = "S"
+	ZERO               = "0"
+	Pipe               = "|"
+	Minus              = "-"
+	L                  = "L"
+	J                  = "J"
+	Seven              = "7"
+	F                  = "F"
+)
+
+type Direction int8
+
+const (
+	toTheTop Direction = iota
+	toTheRight
+	toTheBottom
+	toTheLeft
 )
 
 func part1() {
@@ -317,180 +337,159 @@ func Part2GetEnclosedTilesCnt(scanner *bufio.Scanner) int {
 		}
 		fmt.Println("")
 	}
+	leftTopStep := slices.MinFunc(steps, func(a, b Pos) int {
+		if a.y != b.y {
+			return a.y - b.y
+		} else {
+			return a.x - b.x
+		}
+	})
+	repeatTil := 0
+	for i, step := range steps {
+		if step == leftTopStep {
+			repeatTil = i
+			break
+		}
+	}
+	fmt.Println(leftTopStep, repeatTil, tiles[leftTopStep.y][leftTopStep.x])
+	direction := initDirection(tiles, steps[repeatTil], steps[repeatTil+1])
+	for i := repeatTil; i < len(steps); i++ {
+		direction = markDirections(tiles, steps[i], direction)
+	}
+	for i := 0; i < repeatTil; i++ {
+		direction = markDirections(tiles, steps[i], direction)
+	}
+	fmt.Println("---with direction")
+	for _, row := range tiles {
+		for _, col := range row {
+			fmt.Print(col)
+		}
+		fmt.Println("")
+	}
+	width := len(tiles[0])
+	height := len(tiles)
 
-	w := len(tiles[0])
-	h := len(tiles)
-	added := []Pos{}
-	for x := 0; x < w; x++ {
-		for y := 0; y < h; y++ {
-			if tiles[y][x] == L {
-				newTiles, dotsAdded := AddColBefore(x, tiles)
-				tiles = newTiles
-				for _, item := range dotsAdded {
-					added = append(added, item)
-				}
-				ground += len(dotsAdded)
-				x++
-				w++
-				break
-			} else if tiles[y][x] == J {
-				newTiles, dotsAdded := AddColAfter(x, tiles)
-				tiles = newTiles
-				for _, item := range dotsAdded {
-					added = append(added, Pos{item.x + 1, item.y})
-				}
-				ground += len(dotsAdded)
-				x++
-				w++
-				break
+	for y, row := range tiles {
+		for x, col := range row {
+			switch col {
+			case BottomToTop:
+				onLeft := Pos{x - 1, y}
+				ground -= MarkOutsideGround(onLeft, tiles, width, height)
+			case TopToBottom:
+				onRight := Pos{x + 1, y}
+				ground -= MarkOutsideGround(onRight, tiles, width, height)
+			case LeftToRight:
+				onTop := Pos{x, y - 1}
+				ground -= MarkOutsideGround(onTop, tiles, width, height)
+			case RightToLeft:
+				onBottom := Pos{x, y + 1}
+				ground -= MarkOutsideGround(onBottom, tiles, width, height)
 			}
 		}
 	}
-	fmt.Println("---after")
+	//for i := 0; i < width; i++ {
+	//	ground -= MarkOutsideGround(Pos{i, 0}, tiles, width, height)
+	//}
+	//for i := 0; i < width; i++ {
+	//	ground -= MarkOutsideGround(Pos{i, height - 1}, tiles, width, height)
+	//}
+	//for i := 0; i < height; i++ {
+	//	ground -= MarkOutsideGround(Pos{0, i}, tiles, width, height)
+	//}
+	//for i := 0; i < height; i++ {
+	//	ground -= MarkOutsideGround(Pos{width - 1, i}, tiles, width, height)
+	//}
+	fmt.Println("---with zero")
 	for _, row := range tiles {
 		for _, col := range row {
 			fmt.Print(col)
 		}
 		fmt.Println("")
 	}
-	for i := 0; i < w; i++ {
-		ground -= MarkOutsideGround(Pos{i, 0}, tiles, w, h)
-	}
-	for i := 0; i < w; i++ {
-		ground -= MarkOutsideGround(Pos{i, h - 1}, tiles, w, h)
-	}
-	for i := 0; i < h; i++ {
-		ground -= MarkOutsideGround(Pos{0, i}, tiles, w, h)
-	}
-	for i := 0; i < h; i++ {
-		ground -= MarkOutsideGround(Pos{w - 1, i}, tiles, w, h)
-	}
-	for _, item := range added {
-		if tiles[item.y][item.x] == Dot {
-			tiles[item.y][item.x] = ADDED
-			ground--
-		}
-	}
-	fmt.Println("---")
-	for _, row := range tiles {
-		for _, col := range row {
-			fmt.Print(col)
-		}
-		fmt.Println("")
-	}
-
 	return ground
+}
+
+func initDirection(tiles [][]Tile, step Pos, nextStep Pos) Direction {
+	switch tiles[step.y][step.x] {
+	case S:
+		return initDirection(tiles, nextStep, Pos{})
+	case Minus:
+		return toTheRight
+	case L:
+		return toTheRight
+	case F:
+		return toTheTop
+	}
+	fmt.Println(step)
+	panic("undefined step:" + tiles[step.y][step.x])
+}
+
+func markDirections(tiles [][]Tile, step Pos, direction Direction) Direction {
+	switch tiles[step.y][step.x] {
+	case Minus:
+		if direction == toTheRight {
+			tiles[step.y][step.x] = LeftToRight
+		} else {
+			tiles[step.y][step.x] = RightToLeft
+		}
+		return direction
+	case Seven:
+		if direction == toTheRight {
+			tiles[step.y][step.x] = LeftToBottom
+			return toTheBottom
+		} else {
+			tiles[step.y][step.x] = BottomToLeft
+			return toTheLeft
+		}
+	case Pipe:
+		if direction == toTheBottom {
+			tiles[step.y][step.x] = TopToBottom
+		} else {
+			tiles[step.y][step.x] = BottomToTop
+		}
+	case J:
+		if direction == toTheRight {
+			tiles[step.y][step.x] = LeftToTop
+			return toTheTop
+		} else {
+			tiles[step.y][step.x] = TopToLeft
+			return toTheLeft
+		}
+	case L:
+		if direction == toTheLeft {
+			tiles[step.y][step.x] = RightToTop
+			return toTheTop
+		} else {
+			tiles[step.y][step.x] = TopToRight
+			return toTheRight
+		}
+	case F:
+		if direction == toTheTop {
+			tiles[step.y][step.x] = BottomToRight
+			return toTheRight
+		} else {
+			tiles[step.y][step.x] = RightToBottom
+			return toTheBottom
+		}
+	}
+	return direction
 }
 
 func MarkOutsideGround(pos Pos, tiles [][]Tile, w, h int) int {
 	cnt := 0
 
-	toLeft := Pos{pos.x - 1, pos.y}
-	toRight := Pos{pos.x + 1, pos.y}
-	toUp := Pos{pos.x, pos.y - 1}
-	toDown := Pos{pos.x, pos.y + 1}
-
-	if pos.x >= 0 && tiles[pos.y][pos.x] == Dot {
+	if pos.x >= 0 && pos.x < w && pos.y >= 0 && pos.y < h && tiles[pos.y][pos.x] == Dot {
 		tiles[pos.y][pos.x] = ZERO
 		cnt += 1
-	}
-	if toLeft.x >= 0 && tiles[toLeft.y][toLeft.x] == Dot {
-		tiles[toLeft.y][toLeft.x] = ZERO
-		cnt += 1 + MarkOutsideGround(toLeft, tiles, w, h)
-	}
-	if toRight.x < w && tiles[toRight.y][toRight.x] == Dot {
-		tiles[toRight.y][toRight.x] = ZERO
-		cnt += 1 + MarkOutsideGround(toRight, tiles, w, h)
-	}
-	if toUp.y >= 0 && tiles[toUp.y][toUp.x] == Dot {
-		tiles[toUp.y][toUp.x] = ZERO
-		cnt += 1 + MarkOutsideGround(toUp, tiles, w, h)
-	}
-	if toDown.y < h && tiles[toDown.y][toDown.x] == Dot {
-		tiles[toDown.y][toDown.x] = ZERO
-		cnt += 1 + MarkOutsideGround(toDown, tiles, w, h)
+
+		toLeft := Pos{pos.x - 1, pos.y}
+		toRight := Pos{pos.x + 1, pos.y}
+		toUp := Pos{pos.x, pos.y - 1}
+		toDown := Pos{pos.x, pos.y + 1}
+		cnt += MarkOutsideGround(toLeft, tiles, w, h)
+		cnt += MarkOutsideGround(toRight, tiles, w, h)
+		cnt += MarkOutsideGround(toUp, tiles, w, h)
+		cnt += MarkOutsideGround(toDown, tiles, w, h)
 	}
 	return cnt
-}
-
-func AddColBefore(colIdx int, tiles [][]Tile) ([][]Tile, []Pos) {
-	newTiles := [][]Tile{}
-	dotsAdded := []Pos{}
-	for y, row := range tiles {
-		line := []Tile{}
-		for x, col := range row {
-			if x == colIdx {
-				switch col {
-				case Minus:
-					line = append(line, Minus)
-				case J:
-					line = append(line, Minus)
-				case Seven:
-					line = append(line, Minus)
-				default:
-					line = append(line, Dot)
-					dotsAdded = append(dotsAdded, Pos{x, y})
-				}
-			}
-			line = append(line, col)
-		}
-		newTiles = append(newTiles, line)
-	}
-	return newTiles, dotsAdded
-}
-func AddColAfter(colIdx int, tiles [][]Tile) ([][]Tile, []Pos) {
-	newTiles := [][]Tile{}
-	dotsAdded := []Pos{}
-	for y, row := range tiles {
-		line := []Tile{}
-		for x, col := range row {
-			line = append(line, col)
-			if x == colIdx {
-				switch col {
-				case Minus:
-					line = append(line, Minus)
-				case L:
-					line = append(line, Minus)
-				case F:
-					line = append(line, Minus)
-				default:
-					line = append(line, Dot)
-					dotsAdded = append(dotsAdded, Pos{x, y})
-				}
-			}
-		}
-		newTiles = append(newTiles, line)
-	}
-	return newTiles, dotsAdded
-}
-
-func AddRow(rowIdx int, tiles [][]Tile) ([][]Tile, []Pos) {
-	newTiles := [][]Tile{}
-	dotsAdded := []Pos{}
-	for y, row := range tiles {
-		if y == rowIdx {
-			line := []Tile{}
-			for x, col := range row {
-				switch col {
-				case Pipe:
-					line = append(line, Pipe)
-				case F:
-					line = append(line, Pipe)
-				case L:
-					line = append(line, Pipe)
-				case Seven:
-					line = append(line, Pipe)
-				case J:
-					line = append(line, Pipe)
-				default:
-					line = append(line, Dot)
-					dotsAdded = append(dotsAdded, Pos{x, y})
-				}
-				line = append(line, col)
-			}
-			newTiles = append(newTiles, line)
-		}
-		newTiles = append(newTiles, row)
-	}
-	return newTiles, dotsAdded
 }
