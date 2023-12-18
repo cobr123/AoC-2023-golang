@@ -17,6 +17,31 @@ func TestPart1GetSum(t *testing.T) {
 	}
 }
 
+func TestPart1GetGalaxies(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	got := len(Part1GetGalaxies(universe))
+	expected := 9
+	if got != expected {
+		t.Errorf("got = %d; want %d", got, expected)
+	}
+}
+
+func TestPart1GetPaths(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	galaxies := Part1GetGalaxies(universe)
+	got := len(Part1GetPaths(galaxies))
+	expected := 36
+	if got != expected {
+		t.Errorf("got = %d; want %d", got, expected)
+	}
+}
+
 func TestPart1ExpandUniverse(t *testing.T) {
 	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
 	b := bytes.NewReader([]byte(input))
