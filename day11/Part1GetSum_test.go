@@ -35,31 +35,92 @@ func TestPart1GetPaths(t *testing.T) {
 	scanner := bufio.NewScanner(b)
 	universe := Part1ParseUniverse(scanner)
 	galaxies := Part1GetGalaxies(universe)
-	got := len(Part1GetPaths(galaxies))
+	got := len(Part1GetPaths(galaxies, universe))
 	expected := 36
 	if got != expected {
 		t.Errorf("got = %d; want %d", got, expected)
 	}
 }
 
-func TestPart1ExpandUniverse(t *testing.T) {
+func TestPart1ExpandUniverse1(t *testing.T) {
 	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
 	b := bytes.NewReader([]byte(input))
 	scanner := bufio.NewScanner(b)
 	universe := Part1ParseUniverse(scanner)
-	got := Part1ExpandUniverse(universe)
-	expected := "....#........\n.........#...\n#............\n.............\n.............\n........#....\n.#...........\n............#\n.............\n.............\n.........#...\n#....#......."
-	b2 := bytes.NewReader([]byte(expected))
-	scanner2 := bufio.NewScanner(b2)
-	expected2 := Part1ParseUniverse(scanner2)
-	for i := 0; i < len(got); i++ {
-		if len(got[i]) != len(expected2[i]) {
-			t.Errorf("got = %v; want %v", string(got[i]), string(expected2[i]))
-		}
-		for j := 0; j < len(got[i]); j++ {
-			if got[i][j] != expected2[i][j] {
-				t.Errorf("got = %v; want %v", string(got[i][j]), string(expected2[i][j]))
-			}
-		}
+	Part1ExpandUniverse(universe, 2)
+	got := universe[0][2]
+	expected := Space{'.', 1, 2}
+	if got != expected {
+		t.Errorf("got = %v; want %v", got, expected)
+	}
+}
+
+func TestPart1ExpandUniverse2(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	Part1ExpandUniverse(universe, 2)
+	got := universe[3][1]
+	expected := Space{'.', 2, 1}
+	if got != expected {
+		t.Errorf("got = %v; want %v", got, expected)
+	}
+}
+
+func TestPart1ExpandUniverse3(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	Part1ExpandUniverse(universe, 2)
+	got := universe[3][2]
+	expected := Space{'.', 2, 2}
+	if got != expected {
+		t.Errorf("got = %v; want %v", got, expected)
+	}
+}
+
+func TestPart1GetPath1(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	from := Pos{0, 3}
+	to := Pos{2, 0}
+	got := Part1GetPath(from, to, universe)
+	expected := Path{from, to, 5}
+	if got != expected {
+		t.Errorf("got = %v; want %v", got, expected)
+	}
+}
+
+func TestPart1GetPath2(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	Part1ExpandUniverse(universe, 2)
+	from := Pos{0, 4}
+	to := Pos{2, 0}
+	got := Part1GetPath(from, to, universe)
+	expected := Path{from, to, 7}
+	if got != expected {
+		t.Errorf("got = %v; want %v", got, expected)
+	}
+}
+
+func TestPart1GetPath3(t *testing.T) {
+	input := "...#......\n.......#..\n#.........\n..........\n......#...\n.#........\n.........#\n..........\n.......#..\n#...#....."
+	b := bytes.NewReader([]byte(input))
+	scanner := bufio.NewScanner(b)
+	universe := Part1ParseUniverse(scanner)
+	Part1ExpandUniverse(universe, 2)
+	from := Pos{0, 4}
+	to := Pos{6, 1}
+	got := Part1GetPath(from, to, universe)
+	expected := Path{from, to, 11}
+	if got != expected {
+		t.Errorf("got = %v; want %v", got, expected)
 	}
 }
