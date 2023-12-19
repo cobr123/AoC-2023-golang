@@ -45,11 +45,11 @@ func Part1GetSum(scanner *bufio.Scanner) int {
 	return Part1GetTotalLoad(dish)
 }
 
-var cacheIdxToDish = map[uint32]string{}
-var cacheDishToIdx = map[string]uint32{}
-var cacheDishIdx uint32 = 0
+var cacheIdxToDish = map[uint8]string{}
+var cacheDishToIdx = map[string]uint8{}
+var cacheDishIdx uint8 = 0
 
-func cacheDish(dish [][]rune) uint32 {
+func cacheDish(dish [][]rune) uint8 {
 	dishStr := str(dish)
 	if idx, ok := cacheDishToIdx[dishStr]; ok {
 		return idx
@@ -64,12 +64,12 @@ func cacheDish(dish [][]rune) uint32 {
 
 func Part2GetSum(scanner *bufio.Scanner) int {
 	dish := Part1ParseDish(scanner)
-	cacheFromTo := map[uint32]uint32{}
+	cacheFromTo := [255]uint8{}
 
 	key := cacheDish(dish)
 
 	for i := 0; i < 1e9; i++ {
-		if value, ok := cacheFromTo[key]; ok {
+		if value := cacheFromTo[key]; value > 0 {
 			key = value
 		} else {
 			dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(cacheIdxToDish[key]))))
