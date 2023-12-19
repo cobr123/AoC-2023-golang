@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 )
@@ -45,10 +46,31 @@ func Part1GetSum(scanner *bufio.Scanner) int {
 
 func Part2GetSum(scanner *bufio.Scanner) int {
 	dish := Part1ParseDish(scanner)
-	for i := 0; i < 1e3; i++ {
-		Part2SpinCycle(dish)
+	key := str(dish)
+	cacheFromTo := map[string]string{}
+
+	for i := 0; i < 1e9; i++ {
+		if value, ok := cacheFromTo[key]; ok {
+			key = value
+		} else {
+			dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(key))))
+			Part2SpinCycle(dish)
+			value = str(dish)
+			cacheFromTo[key] = value
+			key = value
+		}
 	}
+	dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(key))))
 	return Part1GetTotalLoad(dish)
+}
+
+func str(dish [][]rune) string {
+	s := ""
+	for _, line := range dish {
+		s += string(line)
+		s += "\n"
+	}
+	return s
 }
 
 func Part1ParseDish(scanner *bufio.Scanner) [][]rune {
