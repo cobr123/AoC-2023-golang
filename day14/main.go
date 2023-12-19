@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -44,23 +45,41 @@ func Part1GetSum(scanner *bufio.Scanner) int {
 	return Part1GetTotalLoad(dish)
 }
 
+var cacheIdxToDish = map[uint32]string{}
+var cacheDishToIdx = map[string]uint32{}
+var cacheDishIdx uint32 = 0
+
+func cacheDish(dish [][]rune) uint32 {
+	dishStr := str(dish)
+	if idx, ok := cacheDishToIdx[dishStr]; ok {
+		return idx
+	} else {
+		idx = cacheDishIdx
+		cacheIdxToDish[idx] = dishStr
+		cacheDishToIdx[dishStr] = idx
+		cacheDishIdx++
+		return idx
+	}
+}
+
 func Part2GetSum(scanner *bufio.Scanner) int {
 	dish := Part1ParseDish(scanner)
-	key := str(dish)
-	cacheFromTo := map[string]string{}
+	cacheFromTo := map[uint32]uint32{}
+
+	key := cacheDish(dish)
 
 	for i := 0; i < 1e9; i++ {
 		if value, ok := cacheFromTo[key]; ok {
 			key = value
 		} else {
-			dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(key))))
+			dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(cacheIdxToDish[key]))))
 			Part2SpinCycle(dish)
-			value = str(dish)
+			value = cacheDish(dish)
 			cacheFromTo[key] = value
 			key = value
 		}
 	}
-	dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(key))))
+	dish = Part1ParseDish(bufio.NewScanner(bytes.NewReader([]byte(cacheIdxToDish[key]))))
 	return Part1GetTotalLoad(dish)
 }
 
@@ -70,7 +89,7 @@ func str(dish [][]rune) string {
 		s += string(line)
 		s += "\n"
 	}
-	return s
+	return strings.Trim(s, "\n")
 }
 
 func Part1ParseDish(scanner *bufio.Scanner) [][]rune {
