@@ -4,10 +4,12 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"sync"
 )
 
 func main() {
 	part1()
+	part2()
 }
 
 func part1() {
@@ -23,6 +25,19 @@ func part1() {
 	fmt.Println(sum)
 }
 
+func part2() {
+	f, err := os.Open("./input.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	sum := Part2CountEnergized(scanner)
+	fmt.Println(sum)
+}
+
 func Part1CountEnergized(scanner *bufio.Scanner) int {
 	tiles := [][]rune{}
 	for scanner.Scan() {
@@ -30,7 +45,7 @@ func Part1CountEnergized(scanner *bufio.Scanner) int {
 		line := []rune(s)
 		tiles = append(tiles, line)
 	}
-	energized := Part1GetEnergized(tiles)
+	energized := Part1GetEnergized(tiles, Step{0, 0, 'r'})
 	cnt := 0
 	for _, line := range energized {
 		for _, power := range line {
@@ -46,19 +61,127 @@ func Part1CountEnergized(scanner *bufio.Scanner) int {
 	return cnt
 }
 
+func Part2CountEnergized(scanner *bufio.Scanner) int {
+	tiles := [][]rune{}
+	for scanner.Scan() {
+		s := scanner.Text()
+		line := []rune(s)
+		tiles = append(tiles, line)
+	}
+	n := 4
+	counts := make([]int, n, n)
+	wg := new(sync.WaitGroup)
+	wg.Add(n)
+
+	go func(idx int, wg *sync.WaitGroup, arr []int) {
+		defer wg.Done()
+
+		maxCnt := 0
+		for i := 0; i < len(tiles); i++ {
+			energized := Part1GetEnergized(tiles, Step{i, 0, 'r'})
+			cnt := 0
+			for _, line := range energized {
+				for _, power := range line {
+					if power > 0 {
+						cnt++
+					}
+				}
+			}
+			if cnt > maxCnt {
+				maxCnt = cnt
+			}
+		}
+		arr[idx] = maxCnt
+	}(0, wg, counts)
+
+	go func(idx int, wg *sync.WaitGroup, arr []int) {
+		defer wg.Done()
+
+		maxCnt := 0
+		for i := 0; i < len(tiles[0]); i++ {
+			energized := Part1GetEnergized(tiles, Step{0, i, 'd'})
+			cnt := 0
+			for _, line := range energized {
+				for _, power := range line {
+					if power > 0 {
+						cnt++
+					}
+				}
+			}
+			if cnt > maxCnt {
+				maxCnt = cnt
+			}
+		}
+		arr[idx] = maxCnt
+	}(1, wg, counts)
+
+	go func(idx int, wg *sync.WaitGroup, arr []int) {
+		defer wg.Done()
+
+		maxCnt := 0
+		lastCol := len(tiles[0]) - 1
+		for i := 0; i < len(tiles); i++ {
+			energized := Part1GetEnergized(tiles, Step{i, lastCol, 'l'})
+			cnt := 0
+			for _, line := range energized {
+				for _, power := range line {
+					if power > 0 {
+						cnt++
+					}
+				}
+			}
+			if cnt > maxCnt {
+				maxCnt = cnt
+			}
+		}
+		arr[idx] = maxCnt
+	}(2, wg, counts)
+
+	go func(idx int, wg *sync.WaitGroup, arr []int) {
+		defer wg.Done()
+
+		maxCnt := 0
+		lastRow := len(tiles) - 1
+		for i := 0; i < len(tiles[0]); i++ {
+			energized := Part1GetEnergized(tiles, Step{lastRow, i, 't'})
+			cnt := 0
+			for _, line := range energized {
+				for _, power := range line {
+					if power > 0 {
+						cnt++
+					}
+				}
+			}
+			if cnt > maxCnt {
+				maxCnt = cnt
+			}
+		}
+		arr[idx] = maxCnt
+	}(3, wg, counts)
+
+	wg.Wait()
+	maxCnt := 0
+	for _, cnt := range counts {
+		if cnt > maxCnt {
+			maxCnt = cnt
+		}
+	}
+	return maxCnt
+}
+
 type Step struct {
 	row       int
 	col       int
 	direction rune
 }
 
-func Part1GetEnergized(tiles [][]rune) [][]int {
+func Part1GetEnergized(tiles [][]rune, initStep Step) [][]int {
 	energized := [][]int{}
 	for _, line := range tiles {
 		energized = append(energized, make([]int, len(line)))
 	}
 	steps := []Step{}
-	steps = append(steps, Step{0, 0, 'r'})
+	steps = append(steps, initStep)
 
 	for len(steps) > 0 {
 		newSteps := []Step{}
