@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math/rand"
 	"os"
 	"slices"
 	"strconv"
@@ -46,57 +45,47 @@ type Step struct {
 	visited         []Pos
 }
 
-func Part1FindPathWithMinHeatLoss(tiles [][]int, initStep Step) int {
-	var minLoss int = 1e9
+func Part1FindPathWithMinHeatLoss(tiles [][]int, step Step) int {
+	var loss int = 1e9
 	endRow := len(tiles) - 1
 	endCol := len(tiles[endRow]) - 1
 
-	steps := []Step{}
-	steps = append(steps, initStep)
-
-	for len(steps) > 0 {
-		newSteps := []Step{}
-		for _, step := range steps {
-			if step.pos.row == endRow && step.pos.col == endCol {
-				minLoss = step.heatLoss
-				//if step.heatLoss < 115 {
-				//Part1PrintVisited(visited, heatLoss)
-				Part1PrintVisited(tiles, step)
-				//}
-			} else {
-				isInTheBox := step.pos.row >= 0 && step.pos.row < len(tiles) && step.pos.col >= 0 && step.pos.col < len(tiles[0])
-				if isInTheBox && step.stepsLeft > 0 && !slices.Contains(step.visited, step.pos) {
-					newDirections := Part1GetNewDirections(step.stepsBeforeTurn, step.direction)
-
-					for _, newDirection := range newDirections {
-						newVisited := append(step.visited, step.pos)
-						row, col := Part1GetNewPosByDirection(step, newDirection)
-						newSteps = append(newSteps, Step{
-							Pos{row, col},
-							newDirection,
-							step.stepsBeforeTurn - 1,
-							step.stepsLeft - 1,
-							step.heatLoss + tiles[step.pos.row][step.pos.col],
-							newVisited},
-						)
-					}
+	newDirections, stepsBeforeTurn := Part1GetNewDirections(step.stepsBeforeTurn-1, step.direction)
+	for _, newDirection := range newDirections {
+		newVisited := append(step.visited, step.pos)
+		row, col := Part1GetNewPosByDirection(step, newDirection)
+		isInTheBox := row >= 0 && row < len(tiles) && col >= 0 && col < len(tiles[0])
+		pos := Pos{row, col}
+		newStep := Step{
+			pos,
+			newDirection,
+			stepsBeforeTurn,
+			step.stepsLeft - 1,
+			step.heatLoss + tiles[step.pos.row][step.pos.col],
+			newVisited}
+		if row == endRow && col == endCol {
+			newStep.heatLoss += tiles[row][col]
+			newStep.visited = append(newStep.visited, pos)
+			if newStep.heatLoss < loss {
+				loss = newStep.heatLoss
+				if loss < 400 {
+					Part1PrintVisited(tiles, newStep)
 				}
 			}
+		} else if isInTheBox && newStep.stepsLeft > 0 && !slices.Contains(step.visited, pos) {
+			if tmp := Part1FindPathWithMinHeatLoss(tiles, newStep); tmp < loss {
+				loss = tmp
+			}
 		}
-		slices.SortFunc(newSteps, func(a, b Step) int {
-			return a.heatLoss - b.heatLoss
-		})
-		Part1PrintVisited(tiles, newSteps[0])
-		fmt.Println(len(newSteps))
-		fmt.Println("-------------------")
-		steps = newSteps
 	}
-	return minLoss
+	return loss
 }
 
 func Part1PrintVisited(tiles [][]int, step Step) {
 	newTiles := Part1CopyTiles(tiles)
+	loss := 0
 	for _, pos := range step.visited {
+		loss += newTiles[pos.row][pos.col]
 		newTiles[pos.row][pos.col] = 0
 	}
 	for _, line := range newTiles {
@@ -105,7 +94,7 @@ func Part1PrintVisited(tiles [][]int, step Step) {
 		}
 		fmt.Println("")
 	}
-	fmt.Println("-------------------", step.heatLoss)
+	fmt.Println("-------------------", step.heatLoss, loss)
 }
 
 func Part1CopyTiles(tiles [][]int) [][]int {
@@ -119,7 +108,7 @@ func Part1CopyTiles(tiles [][]int) [][]int {
 	return newTiles
 }
 
-func Part1GetNewDirections(stepsBeforeTurn int, direction rune) []rune {
+func Part1GetNewDirections(stepsBeforeTurn int, direction rune) ([]rune, int) {
 	newDirections := []rune{}
 	if stepsBeforeTurn == 1 {
 		stepsBeforeTurn = 3
@@ -141,10 +130,10 @@ func Part1GetNewDirections(stepsBeforeTurn int, direction rune) []rune {
 			newDirections = append(newDirections, 'r', 't', 'd')
 		}
 	}
-	rand.Shuffle(len(newDirections), func(i, j int) {
-		newDirections[i], newDirections[j] = newDirections[j], newDirections[i]
-	})
-	return newDirections
+	//rand.Shuffle(len(newDirections), func(i, j int) {
+	//	newDirections[i], newDirections[j] = newDirections[j], newDirections[i]
+	//})
+	return newDirections, stepsBeforeTurn
 }
 
 func Part1GetNewPosByDirection(step Step, direction rune) (int, int) {
