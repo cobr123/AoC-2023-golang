@@ -3,8 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
+	"sync"
 )
 
 func main() {
@@ -42,59 +44,27 @@ func Part1FindPathWithMinHeatLoss(tiles [][]int, visited [][]rune, direction run
 
 	if step.row == endRow && step.col == endCol {
 		minLoss = heatLoss
-		for _, line := range visited {
-			for _, ch := range line {
-				switch ch {
-				case 't':
-					fmt.Print("^")
-				case 'd':
-					fmt.Print("v")
-				case 'l':
-					fmt.Print("<")
-				case 'r':
-					fmt.Print(">")
-				default:
-					fmt.Print(string(ch))
-				}
-			}
-			fmt.Println("")
+		if heatLoss < 110 {
+			Part1PrintVisited(visited, heatLoss)
 		}
-		fmt.Println("-------------------", heatLoss)
 	} else {
 		isInTheBox := step.row >= 0 && step.row < len(tiles) && step.col >= 0 && step.col < len(tiles[0])
 		if isInTheBox && stepsLeft > 0 && visited[step.row][step.col] == '.' {
-			newDirections := []rune{}
-			if stepsBeforeTurn == 1 {
-				stepsBeforeTurn = 3
-				switch direction {
-				case 't', 'd':
-					newDirections = append(newDirections, 'r', 'l')
-				case 'l', 'r':
-					newDirections = append(newDirections, 'd', 't')
-				}
-			} else {
-				switch direction {
-				case 't':
-					newDirections = append(newDirections, 't', 'l', 'r')
-				case 'd':
-					newDirections = append(newDirections, 'd', 'l', 'r')
-				case 'l':
-					newDirections = append(newDirections, 'l', 't', 'd')
-				case 'r':
-					newDirections = append(newDirections, 'r', 't', 'd')
-				}
+			newDirections := Part1GetNewDirections(stepsBeforeTurn, direction)
+			n := len(newDirections)
+			losses := make([]int, n, n)
+			wg := new(sync.WaitGroup)
+			wg.Add(n)
+			for i, newDirection := range newDirections {
+				go func(idx int, wg *sync.WaitGroup, arr []int, newDirection rune, visited [][]rune) {
+					newVisited := Part1CopyVisited(visited)
+					newVisited[step.row][step.col] = newDirection
+					row, col := Part1GetNewPosByDirection(step, newDirection)
+					arr[idx] = Part1FindPathWithMinHeatLoss(tiles, newVisited, newDirection, stepsBeforeTurn-1, stepsLeft-1, heatLoss+tiles[step.row][step.col], Step{row, col})
+				}(i, wg, losses, newDirection, visited)
 			}
-			for _, newDirection := range newDirections {
-				newVisited := make([][]rune, len(visited))
-				for i := 0; i < len(newVisited); i++ {
-					newVisited[i] = make([]rune, len(visited[i]))
-					for k := 0; k < len(newVisited[i]); k++ {
-						newVisited[i][k] = visited[i][k]
-					}
-				}
-				newVisited[step.row][step.col] = newDirection
-				row, col := Part1GetNewPosByDirection(step, newDirection)
-				loss := Part1FindPathWithMinHeatLoss(tiles, newVisited, newDirection, stepsBeforeTurn-1, stepsLeft-1, heatLoss+tiles[step.row][step.col], Step{row, col})
+			wg.Wait()
+			for _, loss := range losses {
 				if loss < minLoss {
 					minLoss = loss
 				}
@@ -102,6 +72,66 @@ func Part1FindPathWithMinHeatLoss(tiles [][]int, visited [][]rune, direction run
 		}
 	}
 	return minLoss
+}
+
+func Part1CopyVisited(visited [][]rune) [][]rune {
+	newVisited := make([][]rune, len(visited))
+	for i := 0; i < len(newVisited); i++ {
+		newVisited[i] = make([]rune, len(visited[i]))
+		for k := 0; k < len(newVisited[i]); k++ {
+			newVisited[i][k] = visited[i][k]
+		}
+	}
+	return newVisited
+}
+
+func Part1PrintVisited(visited [][]rune, heatLoss int) {
+	for _, line := range visited {
+		for _, ch := range line {
+			switch ch {
+			case 't':
+				fmt.Print("^")
+			case 'd':
+				fmt.Print("v")
+			case 'l':
+				fmt.Print("<")
+			case 'r':
+				fmt.Print(">")
+			default:
+				fmt.Print(string(ch))
+			}
+		}
+		fmt.Println("")
+	}
+	fmt.Println("-------------------", heatLoss)
+}
+
+func Part1GetNewDirections(stepsBeforeTurn int, direction rune) []rune {
+	newDirections := []rune{}
+	if stepsBeforeTurn == 1 {
+		stepsBeforeTurn = 3
+		switch direction {
+		case 't', 'd':
+			newDirections = append(newDirections, 'r', 'l')
+		case 'l', 'r':
+			newDirections = append(newDirections, 'd', 't')
+		}
+	} else {
+		switch direction {
+		case 't':
+			newDirections = append(newDirections, 't', 'l', 'r')
+		case 'd':
+			newDirections = append(newDirections, 'd', 'l', 'r')
+		case 'l':
+			newDirections = append(newDirections, 'l', 't', 'd')
+		case 'r':
+			newDirections = append(newDirections, 'r', 't', 'd')
+		}
+	}
+	rand.Shuffle(len(newDirections), func(i, j int) {
+		newDirections[i], newDirections[j] = newDirections[j], newDirections[i]
+	})
+	return newDirections
 }
 
 func Part1GetNewPosByDirection(step Step, direction rune) (int, int) {
