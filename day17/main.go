@@ -27,7 +27,7 @@ func part1() {
 
 func Part1FindPath(scanner *bufio.Scanner) int {
 	tiles := Part1GetTiles(scanner)
-	maxSteps := 35 //len(tiles) * len(tiles[0])
+	maxSteps := len(tiles) * len(tiles[0])
 	return Part1FindPathWithMinHeatLoss(tiles, Step{Pos{0, 0}, 'r', 3, maxSteps, 0, []Pos{}})
 }
 
@@ -49,33 +49,35 @@ type Step struct {
 	visited         []Pos
 }
 
+type Turn struct {
+	pos       Pos
+	direction rune
+	loss      int
+}
+
 var loss int = 1e9
 
 func Part1FindPathWithMinHeatLoss(tiles [][]int, step Step) int {
-	endRow := len(tiles) - 1
-	endCol := len(tiles[endRow]) - 1
-
-	newDirections, stepsBeforeTurn := Part1GetNewDirections(tiles, step.pos, step.stepsBeforeTurn, step.direction)
-	for _, newDirection := range newDirections {
+	newTurns, stepsBeforeTurn := Part1GetNewTurns(tiles, step)
+	for _, newTurn := range newTurns {
 		newVisited := append(step.visited, step.pos)
-		pos := Part1GetNewPosByDirection(step.pos, newDirection)
 		newStep := Step{
-			pos,
-			newDirection,
+			newTurn.pos,
+			newTurn.direction,
 			stepsBeforeTurn,
 			step.stepsLeft - 1,
 			step.heatLoss + tiles[step.pos.row][step.pos.col],
 			newVisited}
-		if pos.row == endRow && pos.col == endCol {
-			newStep.heatLoss += tiles[pos.row][pos.col]
-			newStep.visited = append(newStep.visited, pos)
+		if newTurn.pos.row == len(tiles)-1 && newTurn.pos.col == len(tiles[0])-1 {
+			newStep.heatLoss += tiles[newTurn.pos.row][newTurn.pos.col]
+			newStep.visited = append(newStep.visited, newTurn.pos)
 			if newStep.heatLoss < loss {
 				loss = newStep.heatLoss
 				if loss < 150 {
 					Part1PrintVisited(tiles, newStep)
 				}
 			}
-		} else if pos.isInTheBox(tiles) && newStep.stepsLeft > 0 && !slices.Contains(newStep.visited, pos) {
+		} else {
 			if tmp := Part1FindPathWithMinHeatLoss(tiles, newStep); tmp < loss {
 				loss = tmp
 			}
@@ -111,55 +113,44 @@ func Part1CopyTiles(tiles [][]int) [][]int {
 	return newTiles
 }
 
-func Part1GetNewDirections(tiles [][]int, pos Pos, stepsBeforeTurn int, direction rune) ([]rune, int) {
+func Part1GetNewDirections(direction rune, stepsBeforeTurn int) ([]rune, int) {
 	newDirections := []rune{}
 	stepsBeforeTurn = stepsBeforeTurn - 1
 	if stepsBeforeTurn == 1 {
 		stepsBeforeTurn = 3
 		switch direction {
 		case 't', 'd':
-			newDirections = append(newDirections, 'l', 'r')
+			newDirections = append(newDirections, 'r', 'l')
 		case 'l', 'r':
 			newDirections = append(newDirections, 'd', 't')
 		}
 	} else {
 		switch direction {
 		case 't':
-			newDirections = append(newDirections, 't', 'l', 'r')
+			newDirections = append(newDirections, 'r', 't', 'l')
 		case 'd':
-			newDirections = append(newDirections, 'd', 'l', 'r')
+			newDirections = append(newDirections, 'r', 'd', 'l')
 		case 'l':
-			newDirections = append(newDirections, 'l', 't', 'd')
+			newDirections = append(newDirections, 'd', 'l', 't')
 		case 'r':
-			newDirections = append(newDirections, 'r', 't', 'd')
+			newDirections = append(newDirections, 'r', 'd', 't')
 		}
 	}
-	tmpDirections := []rune{}
-	for _, d := range newDirections {
-		if newPos := Part1GetNewPosByDirection(pos, d); newPos.isInTheBox(tiles) {
-			tmpDirections = append(tmpDirections, d)
-		}
-	}
-	newDirections = tmpDirections
-	slices.SortFunc(newDirections, func(a, b rune) int {
-		posA := Part1GetNewPosByDirection(pos, a)
-		posB := Part1GetNewPosByDirection(pos, b)
-		return tiles[posA.row][posA.col] - tiles[posB.row][posB.col]
-	})
-	//slices.SortFunc(newDirections, func(a, b rune) int {
-	//	posA := Part1GetNewPosByDirection(pos, a)
-	//	posB := Part1GetNewPosByDirection(pos, b)
-	//	if posA.row == posB.row {
-	//		return posB.col - posA.col
-	//	} else {
-	//		return posB.row - posA.row
-	//	}
-	//})
-
-	//rand.Shuffle(len(newDirections), func(i, j int) {
-	//	newDirections[i], newDirections[j] = newDirections[j], newDirections[i]
-	//})
 	return newDirections, stepsBeforeTurn
+}
+
+func Part1GetNewTurns(tiles [][]int, step Step) ([]Turn, int) {
+	newDirections, stepsBeforeTurn := Part1GetNewDirections(step.direction, step.stepsBeforeTurn)
+	newTurns := []Turn{}
+	for _, d := range newDirections {
+		if newPos := Part1GetNewPosByDirection(step.pos, d); newPos.isInTheBox(tiles) && step.stepsLeft > 0 && !slices.Contains(step.visited, newPos) {
+			newTurns = append(newTurns, Turn{newPos, d, tiles[newPos.row][newPos.col]})
+		}
+	}
+	//slices.SortFunc(newTurns, func(a, b Turn) int {
+	//	return a.loss - b.loss
+	//})
+	return newTurns, stepsBeforeTurn
 }
 
 func Part1GetNewPosByDirection(pos Pos, direction rune) Pos {
