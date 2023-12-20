@@ -27,13 +27,17 @@ func part1() {
 
 func Part1FindPath(scanner *bufio.Scanner) int {
 	tiles := Part1GetTiles(scanner)
-	maxSteps := len(tiles) * len(tiles[0])
+	maxSteps := 35 //len(tiles) * len(tiles[0])
 	return Part1FindPathWithMinHeatLoss(tiles, Step{Pos{0, 0}, 'r', 3, maxSteps, 0, []Pos{}})
 }
 
 type Pos struct {
 	row int
 	col int
+}
+
+func (p *Pos) isInTheBox(tiles [][]int) bool {
+	return p.row >= 0 && p.row < len(tiles) && p.col >= 0 && p.col < len(tiles[0])
 }
 
 type Step struct {
@@ -45,17 +49,16 @@ type Step struct {
 	visited         []Pos
 }
 
+var loss int = 1e9
+
 func Part1FindPathWithMinHeatLoss(tiles [][]int, step Step) int {
-	var loss int = 1e9
 	endRow := len(tiles) - 1
 	endCol := len(tiles[endRow]) - 1
 
-	newDirections, stepsBeforeTurn := Part1GetNewDirections(step.stepsBeforeTurn-1, step.direction)
+	newDirections, stepsBeforeTurn := Part1GetNewDirections(tiles, step.pos, step.stepsBeforeTurn, step.direction)
 	for _, newDirection := range newDirections {
 		newVisited := append(step.visited, step.pos)
-		row, col := Part1GetNewPosByDirection(step, newDirection)
-		isInTheBox := row >= 0 && row < len(tiles) && col >= 0 && col < len(tiles[0])
-		pos := Pos{row, col}
+		pos := Part1GetNewPosByDirection(step.pos, newDirection)
 		newStep := Step{
 			pos,
 			newDirection,
@@ -63,16 +66,16 @@ func Part1FindPathWithMinHeatLoss(tiles [][]int, step Step) int {
 			step.stepsLeft - 1,
 			step.heatLoss + tiles[step.pos.row][step.pos.col],
 			newVisited}
-		if row == endRow && col == endCol {
-			newStep.heatLoss += tiles[row][col]
+		if pos.row == endRow && pos.col == endCol {
+			newStep.heatLoss += tiles[pos.row][pos.col]
 			newStep.visited = append(newStep.visited, pos)
 			if newStep.heatLoss < loss {
 				loss = newStep.heatLoss
-				if loss < 400 {
+				if loss < 150 {
 					Part1PrintVisited(tiles, newStep)
 				}
 			}
-		} else if isInTheBox && newStep.stepsLeft > 0 && !slices.Contains(step.visited, pos) {
+		} else if pos.isInTheBox(tiles) && newStep.stepsLeft > 0 && !slices.Contains(newStep.visited, pos) {
 			if tmp := Part1FindPathWithMinHeatLoss(tiles, newStep); tmp < loss {
 				loss = tmp
 			}
@@ -108,13 +111,14 @@ func Part1CopyTiles(tiles [][]int) [][]int {
 	return newTiles
 }
 
-func Part1GetNewDirections(stepsBeforeTurn int, direction rune) ([]rune, int) {
+func Part1GetNewDirections(tiles [][]int, pos Pos, stepsBeforeTurn int, direction rune) ([]rune, int) {
 	newDirections := []rune{}
+	stepsBeforeTurn = stepsBeforeTurn - 1
 	if stepsBeforeTurn == 1 {
 		stepsBeforeTurn = 3
 		switch direction {
 		case 't', 'd':
-			newDirections = append(newDirections, 'r', 'l')
+			newDirections = append(newDirections, 'l', 'r')
 		case 'l', 'r':
 			newDirections = append(newDirections, 'd', 't')
 		}
@@ -130,22 +134,44 @@ func Part1GetNewDirections(stepsBeforeTurn int, direction rune) ([]rune, int) {
 			newDirections = append(newDirections, 'r', 't', 'd')
 		}
 	}
+	tmpDirections := []rune{}
+	for _, d := range newDirections {
+		if newPos := Part1GetNewPosByDirection(pos, d); newPos.isInTheBox(tiles) {
+			tmpDirections = append(tmpDirections, d)
+		}
+	}
+	newDirections = tmpDirections
+	slices.SortFunc(newDirections, func(a, b rune) int {
+		posA := Part1GetNewPosByDirection(pos, a)
+		posB := Part1GetNewPosByDirection(pos, b)
+		return tiles[posA.row][posA.col] - tiles[posB.row][posB.col]
+	})
+	//slices.SortFunc(newDirections, func(a, b rune) int {
+	//	posA := Part1GetNewPosByDirection(pos, a)
+	//	posB := Part1GetNewPosByDirection(pos, b)
+	//	if posA.row == posB.row {
+	//		return posB.col - posA.col
+	//	} else {
+	//		return posB.row - posA.row
+	//	}
+	//})
+
 	//rand.Shuffle(len(newDirections), func(i, j int) {
 	//	newDirections[i], newDirections[j] = newDirections[j], newDirections[i]
 	//})
 	return newDirections, stepsBeforeTurn
 }
 
-func Part1GetNewPosByDirection(step Step, direction rune) (int, int) {
+func Part1GetNewPosByDirection(pos Pos, direction rune) Pos {
 	switch direction {
 	case 't':
-		return step.pos.row - 1, step.pos.col
+		return Pos{pos.row - 1, pos.col}
 	case 'd':
-		return step.pos.row + 1, step.pos.col
+		return Pos{pos.row + 1, pos.col}
 	case 'l':
-		return step.pos.row, step.pos.col - 1
+		return Pos{pos.row, pos.col - 1}
 	case 'r':
-		return step.pos.row, step.pos.col + 1
+		return Pos{pos.row, pos.col + 1}
 	}
 	panic("unknown direction: " + string(direction))
 }
