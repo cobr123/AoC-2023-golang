@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"slices"
 	"strconv"
-	"sync"
 )
 
 func main() {
@@ -27,83 +27,96 @@ func part1() {
 }
 
 func Part1FindPath(scanner *bufio.Scanner) int {
-	tiles, visited := Part1GetTiles(scanner)
+	tiles := Part1GetTiles(scanner)
 	maxSteps := len(tiles) * len(tiles[0])
-	return Part1FindPathWithMinHeatLoss(tiles, visited, 'r', 3, maxSteps, 0, Step{0, 0})
+	return Part1FindPathWithMinHeatLoss(tiles, Step{Pos{0, 0}, 'r', 3, maxSteps, 0, []Pos{}})
 }
 
-type Step struct {
+type Pos struct {
 	row int
 	col int
 }
 
-func Part1FindPathWithMinHeatLoss(tiles [][]int, visited [][]rune, direction rune, stepsBeforeTurn int, stepsLeft int, heatLoss int, step Step) int {
+type Step struct {
+	pos             Pos
+	direction       rune
+	stepsBeforeTurn int
+	stepsLeft       int
+	heatLoss        int
+	visited         []Pos
+}
+
+func Part1FindPathWithMinHeatLoss(tiles [][]int, initStep Step) int {
 	var minLoss int = 1e9
 	endRow := len(tiles) - 1
 	endCol := len(tiles[endRow]) - 1
 
-	if step.row == endRow && step.col == endCol {
-		minLoss = heatLoss
-		if heatLoss < 110 {
-			Part1PrintVisited(visited, heatLoss)
-		}
-	} else {
-		isInTheBox := step.row >= 0 && step.row < len(tiles) && step.col >= 0 && step.col < len(tiles[0])
-		if isInTheBox && stepsLeft > 0 && visited[step.row][step.col] == '.' {
-			newDirections := Part1GetNewDirections(stepsBeforeTurn, direction)
-			n := len(newDirections)
-			losses := make([]int, n, n)
-			wg := new(sync.WaitGroup)
-			wg.Add(n)
-			for i, newDirection := range newDirections {
-				go func(idx int, wg *sync.WaitGroup, arr []int, newDirection rune, visited [][]rune) {
-					newVisited := Part1CopyVisited(visited)
-					newVisited[step.row][step.col] = newDirection
-					row, col := Part1GetNewPosByDirection(step, newDirection)
-					arr[idx] = Part1FindPathWithMinHeatLoss(tiles, newVisited, newDirection, stepsBeforeTurn-1, stepsLeft-1, heatLoss+tiles[step.row][step.col], Step{row, col})
-				}(i, wg, losses, newDirection, visited)
-			}
-			wg.Wait()
-			for _, loss := range losses {
-				if loss < minLoss {
-					minLoss = loss
+	steps := []Step{}
+	steps = append(steps, initStep)
+
+	for len(steps) > 0 {
+		newSteps := []Step{}
+		for _, step := range steps {
+			if step.pos.row == endRow && step.pos.col == endCol {
+				minLoss = step.heatLoss
+				//if step.heatLoss < 115 {
+				//Part1PrintVisited(visited, heatLoss)
+				Part1PrintVisited(tiles, step)
+				//}
+			} else {
+				isInTheBox := step.pos.row >= 0 && step.pos.row < len(tiles) && step.pos.col >= 0 && step.pos.col < len(tiles[0])
+				if isInTheBox && step.stepsLeft > 0 && !slices.Contains(step.visited, step.pos) {
+					newDirections := Part1GetNewDirections(step.stepsBeforeTurn, step.direction)
+
+					for _, newDirection := range newDirections {
+						newVisited := append(step.visited, step.pos)
+						row, col := Part1GetNewPosByDirection(step, newDirection)
+						newSteps = append(newSteps, Step{
+							Pos{row, col},
+							newDirection,
+							step.stepsBeforeTurn - 1,
+							step.stepsLeft - 1,
+							step.heatLoss + tiles[step.pos.row][step.pos.col],
+							newVisited},
+						)
+					}
 				}
 			}
 		}
+		slices.SortFunc(newSteps, func(a, b Step) int {
+			return a.heatLoss - b.heatLoss
+		})
+		Part1PrintVisited(tiles, newSteps[0])
+		fmt.Println(len(newSteps))
+		fmt.Println("-------------------")
+		steps = newSteps
 	}
 	return minLoss
 }
 
-func Part1CopyVisited(visited [][]rune) [][]rune {
-	newVisited := make([][]rune, len(visited))
-	for i := 0; i < len(newVisited); i++ {
-		newVisited[i] = make([]rune, len(visited[i]))
-		for k := 0; k < len(newVisited[i]); k++ {
-			newVisited[i][k] = visited[i][k]
-		}
+func Part1PrintVisited(tiles [][]int, step Step) {
+	newTiles := Part1CopyTiles(tiles)
+	for _, pos := range step.visited {
+		newTiles[pos.row][pos.col] = 0
 	}
-	return newVisited
-}
-
-func Part1PrintVisited(visited [][]rune, heatLoss int) {
-	for _, line := range visited {
+	for _, line := range newTiles {
 		for _, ch := range line {
-			switch ch {
-			case 't':
-				fmt.Print("^")
-			case 'd':
-				fmt.Print("v")
-			case 'l':
-				fmt.Print("<")
-			case 'r':
-				fmt.Print(">")
-			default:
-				fmt.Print(string(ch))
-			}
+			fmt.Print(strconv.Itoa(ch))
 		}
 		fmt.Println("")
 	}
-	fmt.Println("-------------------", heatLoss)
+	fmt.Println("-------------------", step.heatLoss)
+}
+
+func Part1CopyTiles(tiles [][]int) [][]int {
+	newTiles := make([][]int, len(tiles))
+	for i := 0; i < len(newTiles); i++ {
+		newTiles[i] = make([]int, len(tiles[i]))
+		for k := 0; k < len(newTiles[i]); k++ {
+			newTiles[i][k] = tiles[i][k]
+		}
+	}
+	return newTiles
 }
 
 func Part1GetNewDirections(stepsBeforeTurn int, direction rune) []rune {
@@ -137,20 +150,19 @@ func Part1GetNewDirections(stepsBeforeTurn int, direction rune) []rune {
 func Part1GetNewPosByDirection(step Step, direction rune) (int, int) {
 	switch direction {
 	case 't':
-		return step.row - 1, step.col
+		return step.pos.row - 1, step.pos.col
 	case 'd':
-		return step.row + 1, step.col
+		return step.pos.row + 1, step.pos.col
 	case 'l':
-		return step.row, step.col - 1
+		return step.pos.row, step.pos.col - 1
 	case 'r':
-		return step.row, step.col + 1
+		return step.pos.row, step.pos.col + 1
 	}
 	panic("unknown direction: " + string(direction))
 }
 
-func Part1GetTiles(scanner *bufio.Scanner) ([][]int, [][]rune) {
+func Part1GetTiles(scanner *bufio.Scanner) [][]int {
 	tiles := [][]int{}
-	visited := [][]rune{}
 	for scanner.Scan() {
 		s := scanner.Text()
 		numbers := []int{}
@@ -164,7 +176,6 @@ func Part1GetTiles(scanner *bufio.Scanner) ([][]int, [][]rune) {
 			notVisited = append(notVisited, '.')
 		}
 		tiles = append(tiles, numbers)
-		visited = append(visited, notVisited)
 	}
-	return tiles, visited
+	return tiles
 }
