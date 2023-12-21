@@ -57,10 +57,72 @@ func (m *Move) String() string {
 func Part1GetSum(scanner *bufio.Scanner) int {
 	moves := Part1ParseMoves(scanner)
 	field := Part1ParseField(moves)
-	Part1PrintField(field)
 	Part1DigField(field, moves)
 	Part1PrintField(field)
-	return 0
+	Part1MarkMarkOutsideTiles(field)
+	Part1PrintField(field)
+	return Part1Count(field)
+}
+
+func Part1Count(field [][]rune) int {
+	cnt := 0
+	for _, line := range field {
+		for _, ch := range line {
+			if ch == '#' || ch == '.' {
+				cnt++
+			}
+		}
+	}
+	return cnt
+}
+
+type Pos struct {
+	x int
+	y int
+}
+
+func Part1MarkMarkOutsideTiles(tiles [][]rune) {
+	w := len(tiles[0])
+	h := len(tiles)
+	for i := 0; i < w; i++ {
+		MarkOutsideGround(Pos{i, 0}, tiles, w, h)
+	}
+	for i := 0; i < w; i++ {
+		MarkOutsideGround(Pos{i, h - 1}, tiles, w, h)
+	}
+	for i := 0; i < h; i++ {
+		MarkOutsideGround(Pos{0, i}, tiles, w, h)
+	}
+	for i := 0; i < h; i++ {
+		MarkOutsideGround(Pos{w - 1, i}, tiles, w, h)
+	}
+}
+
+func MarkOutsideGround(pos Pos, tiles [][]rune, w, h int) {
+	toLeft := Pos{pos.x - 1, pos.y}
+	toRight := Pos{pos.x + 1, pos.y}
+	toUp := Pos{pos.x, pos.y - 1}
+	toDown := Pos{pos.x, pos.y + 1}
+
+	if pos.x >= 0 && tiles[pos.y][pos.x] == '.' {
+		tiles[pos.y][pos.x] = '0'
+	}
+	if toLeft.x >= 0 && tiles[toLeft.y][toLeft.x] == '.' {
+		tiles[toLeft.y][toLeft.x] = '0'
+		MarkOutsideGround(toLeft, tiles, w, h)
+	}
+	if toRight.x < w && tiles[toRight.y][toRight.x] == '.' {
+		tiles[toRight.y][toRight.x] = '0'
+		MarkOutsideGround(toRight, tiles, w, h)
+	}
+	if toUp.y >= 0 && tiles[toUp.y][toUp.x] == '.' {
+		tiles[toUp.y][toUp.x] = '0'
+		MarkOutsideGround(toUp, tiles, w, h)
+	}
+	if toDown.y < h && tiles[toDown.y][toDown.x] == '.' {
+		tiles[toDown.y][toDown.x] = '0'
+		MarkOutsideGround(toDown, tiles, w, h)
+	}
 }
 
 func Part1DigField(field [][]rune, moves []Move) {
@@ -138,9 +200,9 @@ func Part1ParseField(moves []Move) [][]rune {
 		}
 	}
 
-	rowsCnt := int(math.Abs(float64(rowMin))+math.Abs(float64(rowMax))) * 2
-	colsCnt := int(math.Abs(float64(colMin))+math.Abs(float64(colMax))) * 2
-	fmt.Println(rowsCnt, colsCnt)
+	rowsCnt := int(math.Abs(float64(rowMin))+math.Abs(float64(rowMax)))*2 + 1
+	colsCnt := int(math.Abs(float64(colMin))+math.Abs(float64(colMax)))*2 + 1
+
 	field := make([][]rune, rowsCnt)
 	for r := 0; r < rowsCnt; r++ {
 		line := make([]rune, colsCnt)
