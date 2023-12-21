@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -51,7 +50,7 @@ const (
 
 type Move struct {
 	direction Direction
-	steps     int
+	steps     int64
 }
 
 func (m *Move) String() string {
@@ -68,137 +67,95 @@ func (m *Move) String() string {
 	return ""
 }
 
-func Part1GetSum(scanner *bufio.Scanner) int {
+func Part1GetSum(scanner *bufio.Scanner) int64 {
 	moves := Part1ParseMoves(scanner)
 	field := Part1ParseField(moves)
-	Part1DigField(field, moves)
-	Part1PrintField(field)
-	Part1MarkMarkOutsideTiles(field)
-	Part1PrintField(field)
-	return Part1Count(field)
+	vertices := Part1DGetVertices(field, moves)
+	return getPolygonArea(vertices)
 }
 
-func Part2GetSum(scanner *bufio.Scanner) int {
+func Part2GetSum(scanner *bufio.Scanner) int64 {
 	moves := Part2ParseMoves(scanner)
 	field := Part1ParseField(moves)
-	Part1DigField(field, moves)
-	Part1PrintField(field)
-	Part1MarkMarkOutsideTiles(field)
-	Part1PrintField(field)
-	return Part1Count(field)
+	vertices := Part1DGetVertices(field, moves)
+	return getPolygonArea(vertices)
 }
 
-func Part1Count(field [][]rune) int {
-	cnt := 0
-	for _, line := range field {
-		for _, ch := range line {
-			if ch == '#' || ch == '.' {
-				cnt++
-			}
-		}
-	}
-	return cnt
+type Field struct {
+	rowsCnt int64
+	colsCnt int64
 }
 
-type Pos struct {
-	x int
-	y int
-}
-
-func Part1MarkMarkOutsideTiles(tiles [][]rune) {
-	w := len(tiles[0])
-	h := len(tiles)
-	for i := 0; i < w; i++ {
-		MarkOutsideGround(Pos{i, 0}, tiles, w, h)
-	}
-	for i := 0; i < w; i++ {
-		MarkOutsideGround(Pos{i, h - 1}, tiles, w, h)
-	}
-	for i := 0; i < h; i++ {
-		MarkOutsideGround(Pos{0, i}, tiles, w, h)
-	}
-	for i := 0; i < h; i++ {
-		MarkOutsideGround(Pos{w - 1, i}, tiles, w, h)
-	}
-}
-
-func MarkOutsideGround(pos Pos, tiles [][]rune, w, h int) {
-	toLeft := Pos{pos.x - 1, pos.y}
-	toRight := Pos{pos.x + 1, pos.y}
-	toUp := Pos{pos.x, pos.y - 1}
-	toDown := Pos{pos.x, pos.y + 1}
-
-	if pos.x >= 0 && tiles[pos.y][pos.x] == '.' {
-		tiles[pos.y][pos.x] = '0'
-	}
-	if toLeft.x >= 0 && tiles[toLeft.y][toLeft.x] == '.' {
-		tiles[toLeft.y][toLeft.x] = '0'
-		MarkOutsideGround(toLeft, tiles, w, h)
-	}
-	if toRight.x < w && tiles[toRight.y][toRight.x] == '.' {
-		tiles[toRight.y][toRight.x] = '0'
-		MarkOutsideGround(toRight, tiles, w, h)
-	}
-	if toUp.y >= 0 && tiles[toUp.y][toUp.x] == '.' {
-		tiles[toUp.y][toUp.x] = '0'
-		MarkOutsideGround(toUp, tiles, w, h)
-	}
-	if toDown.y < h && tiles[toDown.y][toDown.x] == '.' {
-		tiles[toDown.y][toDown.x] = '0'
-		MarkOutsideGround(toDown, tiles, w, h)
-	}
-}
-
-func Part1DigField(field [][]rune, moves []Move) {
-	rowCurr := len(field)/2 - 1
-	colCurr := len(field[0])/2 - 1
+func Part1DGetVertices(field Field, moves []Move) []Pos {
+	vertices := []Pos{}
+	rowCurr := field.rowsCnt/2 - 1
+	colCurr := field.colsCnt/2 - 1
 	for _, move := range moves {
 		switch move.direction {
 		case Up:
 			rowPrev := rowCurr
 			rowCurr -= move.steps
 			for i := rowCurr; i <= rowPrev; i++ {
-				field[i][colCurr] = '#'
+				vertices = append(vertices, Pos{i, colCurr})
 			}
 		case Down:
 			rowPrev := rowCurr
 			rowCurr += move.steps
 			for i := rowPrev; i <= rowCurr; i++ {
-				field[i][colCurr] = '#'
+				vertices = append(vertices, Pos{i, colCurr})
 			}
 		case Left:
 			colPrev := colCurr
 			colCurr -= move.steps
 			for i := colCurr; i <= colPrev; i++ {
-				field[rowCurr][i] = '#'
+				vertices = append(vertices, Pos{rowCurr, i})
 			}
 		case Right:
 			colPrev := colCurr
 			colCurr += move.steps
 			for i := colPrev; i <= colCurr; i++ {
-				field[rowCurr][i] = '#'
+				vertices = append(vertices, Pos{rowCurr, i})
 			}
 		}
 	}
+	return vertices
 }
 
-func Part1PrintField(field [][]rune) {
-	for _, line := range field {
-		for _, ch := range line {
-			fmt.Print(string(ch))
-		}
-		fmt.Println("")
+type Pos struct {
+	row int64
+	col int64
+}
+
+// A function to apply the Shoelace algorithm
+func getPolygonArea(vertices []Pos) int64 {
+	if len(vertices) == 0 {
+		return 0
 	}
-	fmt.Println("---------------")
+	var sum1 int64 = 0
+	var sum2 int64 = 0
+
+	for i := 0; i < len(vertices)-1; i++ {
+		sum1 = sum1 + vertices[i].row*vertices[i+1].col
+		sum2 = sum2 + vertices[i].col*vertices[i+1].row
+	}
+
+	sum1 = sum1 + vertices[len(vertices)-1].row*vertices[0].col
+	sum2 = sum2 + vertices[0].row*vertices[len(vertices)-1].col
+
+	if sum1 > sum2 {
+		return (sum1 - sum2) / 2
+	} else {
+		return (sum2 - sum1) / 2
+	}
 }
 
-func Part1ParseField(moves []Move) [][]rune {
-	var rowMin int = 1e9
-	var rowMax int = -1e9
-	var colMin int = 1e9
-	var colMax int = -1e9
-	colCurr := 0
-	rowCurr := 0
+func Part1ParseField(moves []Move) Field {
+	var rowMin int64 = 1e9
+	var rowMax int64 = -1e9
+	var colMin int64 = 1e9
+	var colMax int64 = -1e9
+	var colCurr int64 = 0
+	var rowCurr int64 = 0
 	for _, move := range moves {
 		switch move.direction {
 		case Up:
@@ -224,19 +181,34 @@ func Part1ParseField(moves []Move) [][]rune {
 		}
 	}
 
-	rowsCnt := int(math.Abs(float64(rowMin))+math.Abs(float64(rowMax)))*2 + 1
-	colsCnt := int(math.Abs(float64(colMin))+math.Abs(float64(colMax)))*2 + 1
-	fmt.Println(rowsCnt, colsCnt)
-
-	field := make([][]rune, rowsCnt)
-	for r := 0; r < rowsCnt; r++ {
-		line := make([]rune, colsCnt)
-		for c := 0; c < colsCnt; c++ {
-			line[c] = '.'
-		}
-		field[r] = line
+	var rowsCnt int64 = 0
+	if rowMin < 0 {
+		rowsCnt += -rowMin
+	} else {
+		rowsCnt += rowMin
 	}
-	return field
+	if rowMax < 0 {
+		rowsCnt += -rowMax
+	} else {
+		rowsCnt += rowMax
+	}
+	rowsCnt = rowsCnt/2 + 1
+
+	var colsCnt int64 = 0
+	if colMin < 0 {
+		colsCnt += -colMin
+	} else {
+		colsCnt += colMin
+	}
+	if colMax < 0 {
+		colsCnt += -colMax
+	} else {
+		colsCnt += colMax
+	}
+	colsCnt = colsCnt/2 + 1
+	fmt.Println(rowMin, colMin, rowMax, colMax, rowsCnt, colsCnt)
+
+	return Field{rowsCnt, colsCnt}
 }
 
 func Part1ParseMoves(scanner *bufio.Scanner) []Move {
@@ -258,7 +230,7 @@ func Part1ParseMoves(scanner *bufio.Scanner) []Move {
 			panic("direction not found")
 
 		}
-		steps, err := strconv.Atoi(directionStepsAndColor[1])
+		steps, err := strconv.ParseInt(directionStepsAndColor[1], 10, 64)
 		if err != nil {
 			panic(err)
 		}
@@ -290,11 +262,11 @@ func Part2ParseMoves(scanner *bufio.Scanner) []Move {
 			panic("direction not found")
 
 		}
-		steps, err := strconv.ParseInt(color, 16, 32)
+		steps, err := strconv.ParseInt(color, 16, 64)
 		if err != nil {
 			panic(err)
 		}
-		move.steps = int(steps)
+		move.steps = steps
 		moves = append(moves, move)
 	}
 	return moves

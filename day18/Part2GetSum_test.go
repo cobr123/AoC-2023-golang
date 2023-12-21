@@ -11,8 +11,8 @@ func TestPart2GetSum(t *testing.T) {
 	b := bytes.NewReader([]byte(input))
 	scanner := bufio.NewScanner(b)
 	got := Part2GetSum(scanner)
-	expected := 952408144115
+	var expected int64 = 952408144115
 	if got != expected {
-		t.Errorf("got = %d; want %d", got, expected)
+		t.Errorf("\n got %d\nwant %d", got, expected)
 	}
 }
