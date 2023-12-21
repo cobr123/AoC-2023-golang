@@ -11,6 +11,7 @@ import (
 
 func main() {
 	part1()
+	part2()
 }
 
 func part1() {
@@ -23,6 +24,19 @@ func part1() {
 	scanner := bufio.NewScanner(f)
 
 	sum := Part1GetSum(scanner)
+	fmt.Println(sum)
+}
+
+func part2() {
+	f, err := os.Open("./input.txt")
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+
+	sum := Part2GetSum(scanner)
 	fmt.Println(sum)
 }
 
@@ -56,6 +70,16 @@ func (m *Move) String() string {
 
 func Part1GetSum(scanner *bufio.Scanner) int {
 	moves := Part1ParseMoves(scanner)
+	field := Part1ParseField(moves)
+	Part1DigField(field, moves)
+	Part1PrintField(field)
+	Part1MarkMarkOutsideTiles(field)
+	Part1PrintField(field)
+	return Part1Count(field)
+}
+
+func Part2GetSum(scanner *bufio.Scanner) int {
+	moves := Part2ParseMoves(scanner)
 	field := Part1ParseField(moves)
 	Part1DigField(field, moves)
 	Part1PrintField(field)
@@ -202,6 +226,7 @@ func Part1ParseField(moves []Move) [][]rune {
 
 	rowsCnt := int(math.Abs(float64(rowMin))+math.Abs(float64(rowMax)))*2 + 1
 	colsCnt := int(math.Abs(float64(colMin))+math.Abs(float64(colMax)))*2 + 1
+	fmt.Println(rowsCnt, colsCnt)
 
 	field := make([][]rune, rowsCnt)
 	for r := 0; r < rowsCnt; r++ {
@@ -238,6 +263,38 @@ func Part1ParseMoves(scanner *bufio.Scanner) []Move {
 			panic(err)
 		}
 		move.steps = steps
+		moves = append(moves, move)
+	}
+	return moves
+}
+
+func Part2ParseMoves(scanner *bufio.Scanner) []Move {
+	moves := []Move{}
+	for scanner.Scan() {
+		s := scanner.Text()
+		prefixAndColor := strings.Split(s, "#")
+		hex := prefixAndColor[1][:len(prefixAndColor[1])-1]
+		color := hex[:len(hex)-1]
+		direction := hex[len(hex)-1:]
+		move := Move{}
+		switch direction {
+		case "3":
+			move.direction = Up
+		case "1":
+			move.direction = Down
+		case "2":
+			move.direction = Left
+		case "0":
+			move.direction = Right
+		default:
+			panic("direction not found")
+
+		}
+		steps, err := strconv.ParseInt(color, 16, 32)
+		if err != nil {
+			panic(err)
+		}
+		move.steps = int(steps)
 		moves = append(moves, move)
 	}
 	return moves
