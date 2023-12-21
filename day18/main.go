@@ -69,16 +69,18 @@ func (m *Move) String() string {
 
 func Part1GetSum(scanner *bufio.Scanner) int64 {
 	moves := Part1ParseMoves(scanner)
-	field := Part1ParseField(moves)
-	vertices := Part1DGetVertices(field, moves)
-	return getPolygonArea(vertices)
+	return PartGetSum(moves)
 }
 
 func Part2GetSum(scanner *bufio.Scanner) int64 {
 	moves := Part2ParseMoves(scanner)
+	return PartGetSum(moves)
+}
+
+func PartGetSum(moves []Move) int64 {
 	field := Part1ParseField(moves)
 	vertices := Part1DGetVertices(field, moves)
-	return getPolygonArea(vertices)
+	return getPolygonArea(vertices) + int64(len(vertices))/2 - 1
 }
 
 type Field struct {
@@ -90,34 +92,21 @@ func Part1DGetVertices(field Field, moves []Move) []Pos {
 	vertices := []Pos{}
 	rowCurr := field.rowsCnt/2 - 1
 	colCurr := field.colsCnt/2 - 1
+
 	for _, move := range moves {
 		switch move.direction {
 		case Up:
-			rowPrev := rowCurr
 			rowCurr -= move.steps
-			for i := rowCurr; i <= rowPrev; i++ {
-				vertices = append(vertices, Pos{i, colCurr})
-			}
 		case Down:
-			rowPrev := rowCurr
 			rowCurr += move.steps
-			for i := rowPrev; i <= rowCurr; i++ {
-				vertices = append(vertices, Pos{i, colCurr})
-			}
 		case Left:
-			colPrev := colCurr
 			colCurr -= move.steps
-			for i := colCurr; i <= colPrev; i++ {
-				vertices = append(vertices, Pos{rowCurr, i})
-			}
 		case Right:
-			colPrev := colCurr
 			colCurr += move.steps
-			for i := colPrev; i <= colCurr; i++ {
-				vertices = append(vertices, Pos{rowCurr, i})
-			}
 		}
+		vertices = append(vertices, Pos{rowCurr, colCurr})
 	}
+	fmt.Println(vertices)
 	return vertices
 }
 
@@ -140,7 +129,7 @@ func getPolygonArea(vertices []Pos) int64 {
 	}
 
 	sum1 = sum1 + vertices[len(vertices)-1].row*vertices[0].col
-	sum2 = sum2 + vertices[0].row*vertices[len(vertices)-1].col
+	sum2 = sum2 + vertices[len(vertices)-1].col*vertices[0].row
 
 	if sum1 > sum2 {
 		return (sum1 - sum2) / 2
@@ -156,6 +145,7 @@ func Part1ParseField(moves []Move) Field {
 	var colMax int64 = -1e9
 	var colCurr int64 = 0
 	var rowCurr int64 = 0
+
 	for _, move := range moves {
 		switch move.direction {
 		case Up:
