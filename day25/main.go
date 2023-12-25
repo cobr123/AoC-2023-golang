@@ -26,6 +26,11 @@ func part1() {
 	fmt.Println(sum)
 }
 
+type Link struct {
+	from string
+	to   string
+}
+
 func Part1GetMult(scanner *bufio.Scanner) int {
 	links := []string{}
 	for scanner.Scan() {
@@ -43,6 +48,9 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 				fromTo1 := strings.Split(links[i], "/")
 				fromTo2 := strings.Split(links[j], "/")
 				fromTo3 := strings.Split(links[k], "/")
+				link1 := Link{fromTo1[0], fromTo1[1]}
+				link2 := Link{fromTo2[0], fromTo2[1]}
+				link3 := Link{fromTo3[0], fromTo3[1]}
 				fmt.Println("checking", fromTo1, fromTo2, fromTo3)
 				n := 3
 				res := make([]bool, n, n)
@@ -55,20 +63,20 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 				tmp = append(tmp, links[k+1:]...)
 				ctx := context.Background()
 
-				go func(ctx context.Context, links []string, from1 string, to1 string, from2 string, to2 string, from3 string, to3 string, wg *sync.WaitGroup, idx int, arr []bool) {
+				go func(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
 					defer wg.Done()
-					arr[idx] = Part1CheckLinks(ctx, links, from1, to1, from2, to2, from3, to3)
-				}(ctx, tmp, fromTo1[0], fromTo1[1], fromTo2[0], fromTo2[1], fromTo3[0], fromTo3[1], wg, 0, res)
+					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
+				}(ctx, tmp, link1, link2, link3, wg, 0, res)
 
-				go func(ctx context.Context, links []string, from1 string, to1 string, from2 string, to2 string, from3 string, to3 string, wg *sync.WaitGroup, idx int, arr []bool) {
+				go func(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
 					defer wg.Done()
-					arr[idx] = Part1CheckLinks(ctx, links, from1, to1, from2, to2, from3, to3)
-				}(ctx, tmp, fromTo2[0], fromTo2[1], fromTo3[0], fromTo3[1], fromTo1[0], fromTo1[1], wg, 1, res)
+					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
+				}(ctx, tmp, link2, link3, link1, wg, 1, res)
 
-				go func(ctx context.Context, links []string, from1 string, to1 string, from2 string, to2 string, from3 string, to3 string, wg *sync.WaitGroup, idx int, arr []bool) {
+				go func(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
 					defer wg.Done()
-					arr[idx] = Part1CheckLinks(ctx, links, from1, to1, from2, to2, from3, to3)
-				}(ctx, tmp, fromTo3[0], fromTo3[1], fromTo1[0], fromTo1[1], fromTo2[0], fromTo2[1], wg, 2, res)
+					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
+				}(ctx, tmp, link3, link1, link2, wg, 2, res)
 
 				wg.Wait()
 				found := true
@@ -80,6 +88,7 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 				}
 				if found {
 					fmt.Println("found", fromTo1, fromTo2, fromTo3)
+					return 0
 				}
 			}
 		}
@@ -87,39 +96,39 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 	return 0
 }
 
-func Part1CheckLinks(ctx context.Context, links []string, from1 string, to1 string, from2 string, to2 string, from3 string, to3 string) bool {
+func Part1Check3Links(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link) bool {
 	n := 3
 	res := make([]bool, n, n)
 	wg := new(sync.WaitGroup)
 	wg.Add(n)
 
 	ll := len(links)
+	localCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = !Part1Find(ctx, links, from1, to1, ll)
+		arr[idx] = !Part1Find(ctx, links, link1.from, link1.to, ll)
 		if !arr[idx] {
 			ctx.Done()
 		}
-	}(ctx, 0, res)
+	}(localCtx, 0, res)
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = (Part1Find(ctx, links, from1, from2, ll) && !Part1Find(ctx, links, from1, to2, ll) && !Part1Find(ctx, links, to1, from2, ll) && Part1Find(ctx, links, to1, to2, ll)) ||
-			(Part1Find(ctx, links, from1, to2, ll) && !Part1Find(ctx, links, from1, from2, ll) && !Part1Find(ctx, links, to1, to2, ll) && Part1Find(ctx, links, to1, from2, ll))
+		arr[idx] = Part1CheckOrLinks(ctx, links, link1, link2)
 		if !arr[idx] {
 			ctx.Done()
 		}
-	}(ctx, 1, res)
+	}(localCtx, 1, res)
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = (Part1Find(ctx, links, from1, from3, ll) && !Part1Find(ctx, links, from1, to3, ll) && !Part1Find(ctx, links, to1, from3, ll) && Part1Find(ctx, links, to1, to3, ll)) ||
-			(Part1Find(ctx, links, from1, to3, ll) && !Part1Find(ctx, links, from1, from3, ll) && !Part1Find(ctx, links, to1, to3, ll) && Part1Find(ctx, links, to1, from3, ll))
+		arr[idx] = Part1CheckOrLinks(ctx, links, link1, link3)
 		if !arr[idx] {
 			ctx.Done()
 		}
-	}(ctx, 2, res)
+	}(localCtx, 2, res)
 
 	wg.Wait()
 	found := true
@@ -130,6 +139,42 @@ func Part1CheckLinks(ctx context.Context, links []string, from1 string, to1 stri
 		}
 	}
 	return found
+}
+
+func Part1CheckOrLinks(ctx context.Context, links []string, link1 Link, link2 Link) bool {
+	n := 2
+	res := make([]bool, n, n)
+	wg := new(sync.WaitGroup)
+	wg.Add(n)
+
+	ll := len(links)
+	localCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	go func(ctx context.Context, idx int, arr []bool) {
+		defer wg.Done()
+		arr[idx] = Part1Find(ctx, links, link1.from, link2.from, ll) && !Part1Find(ctx, links, link1.from, link2.to, ll) && !Part1Find(ctx, links, link1.to, link2.from, ll) && Part1Find(ctx, links, link1.to, link2.to, ll)
+		if arr[idx] {
+			ctx.Done()
+		}
+	}(localCtx, 0, res)
+
+	go func(ctx context.Context, idx int, arr []bool) {
+		defer wg.Done()
+		arr[idx] = Part1Find(ctx, links, link1.from, link2.to, ll) && !Part1Find(ctx, links, link1.from, link2.from, ll) && !Part1Find(ctx, links, link1.to, link2.to, ll) && Part1Find(ctx, links, link1.to, link2.from, ll)
+		if arr[idx] {
+			ctx.Done()
+		}
+	}(localCtx, 1, res)
+
+	wg.Wait()
+
+	for _, item := range res {
+		if item {
+			return true
+		}
+	}
+	return false
 }
 
 func Part1Find(ctx context.Context, links []string, from string, to string, cnt int) bool {
