@@ -52,6 +52,20 @@ func Part1GetLinks(scanner *bufio.Scanner) []Link {
 
 func Part1GetMult(scanner *bufio.Scanner) int {
 	links := Part1GetLinks(scanner)
+	initLinks := slices.Clone(links)
+	slices.SortFunc(links, func(a, b Link) int {
+		if a.from != b.from {
+			return strings.Compare(a.from, b.from)
+		}
+		return strings.Compare(a.to, b.to)
+	})
+	for i, _ := range links {
+		if strings.Compare(links[i].from, links[i].to) >= 0 {
+			links[i] = Link{links[i].from, links[i].to}
+		} else {
+			links[i] = Link{links[i].to, links[i].from}
+		}
+	}
 	for i := 0; i < len(links)-2; i++ {
 		for j := i + 1; j < len(links)-1; j++ {
 			for k := j + 1; k < len(links); k++ {
@@ -95,7 +109,7 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 				}
 				if found {
 					fmt.Println("found", link1, link2, link3)
-					return Part1CountPaths(links, link1, link2, link3)
+					return Part1CountPaths(initLinks, link1, link2, link3)
 				}
 			}
 		}
