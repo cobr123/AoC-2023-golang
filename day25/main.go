@@ -66,19 +66,21 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 			links[i] = Link{links[i].to, links[i].from}
 		}
 	}
-	for i := 0; i < len(links)-2; i++ {
-		for j := i + 1; j < len(links)-1; j++ {
-			for k := j + 1; k < len(links); k++ {
-				link1 := links[i]
-				link2 := links[j]
+	ll := len(links)
+	for i := 0; i < ll-2; i++ {
+		link1 := links[i]
+		fmt.Println("checking", link1, i, ll-2)
+		for j := i + 1; j < ll-1; j++ {
+			link2 := links[j]
+			for k := j + 1; k < ll; k++ {
 				link3 := links[k]
-				fmt.Println("checking", link1, link2, link3)
 				n := 3
 				res := make([]bool, n, n)
 				wg := new(sync.WaitGroup)
 				wg.Add(n)
 
 				tmp := []Link{}
+				tmp = append(tmp, links[0:i]...)
 				tmp = append(tmp, links[i+1:j]...)
 				tmp = append(tmp, links[j+1:k]...)
 				tmp = append(tmp, links[k+1:]...)
