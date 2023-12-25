@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -31,49 +32,55 @@ type Link struct {
 	to   string
 }
 
-func Part1GetMult(scanner *bufio.Scanner) int {
-	links := []string{}
+func (l *Link) Same(other *Link) bool {
+	return (l.from == other.from && l.to == other.to) || (l.from == other.to && l.to == other.from)
+}
+
+func Part1GetLinks(scanner *bufio.Scanner) []Link {
+	links := []Link{}
 	for scanner.Scan() {
 		s := scanner.Text()
 		parts := strings.Split(s, ": ")
 		from := parts[0]
 		otherParts := strings.Split(parts[1], " ")
 		for _, item := range otherParts {
-			links = append(links, from+"/"+item)
+			links = append(links, Link{from, item})
 		}
 	}
+	return links
+}
+
+func Part1GetMult(scanner *bufio.Scanner) int {
+	links := Part1GetLinks(scanner)
 	for i := 0; i < len(links)-2; i++ {
 		for j := i + 1; j < len(links)-1; j++ {
 			for k := j + 1; k < len(links); k++ {
-				fromTo1 := strings.Split(links[i], "/")
-				fromTo2 := strings.Split(links[j], "/")
-				fromTo3 := strings.Split(links[k], "/")
-				link1 := Link{fromTo1[0], fromTo1[1]}
-				link2 := Link{fromTo2[0], fromTo2[1]}
-				link3 := Link{fromTo3[0], fromTo3[1]}
-				fmt.Println("checking", fromTo1, fromTo2, fromTo3)
+				link1 := links[i]
+				link2 := links[j]
+				link3 := links[k]
+				fmt.Println("checking", link1, link2, link3)
 				n := 3
 				res := make([]bool, n, n)
 				wg := new(sync.WaitGroup)
 				wg.Add(n)
 
-				tmp := []string{}
+				tmp := []Link{}
 				tmp = append(tmp, links[i+1:j]...)
 				tmp = append(tmp, links[j+1:k]...)
 				tmp = append(tmp, links[k+1:]...)
 				ctx := context.Background()
 
-				go func(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
+				go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
 					defer wg.Done()
 					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
 				}(ctx, tmp, link1, link2, link3, wg, 0, res)
 
-				go func(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
+				go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
 					defer wg.Done()
 					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
 				}(ctx, tmp, link2, link3, link1, wg, 1, res)
 
-				go func(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
+				go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
 					defer wg.Done()
 					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
 				}(ctx, tmp, link3, link1, link2, wg, 2, res)
@@ -87,8 +94,8 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 					}
 				}
 				if found {
-					fmt.Println("found", fromTo1, fromTo2, fromTo3)
-					return 0
+					fmt.Println("found", link1, link2, link3)
+					return Part1CountPaths(links, link1, link2, link3)
 				}
 			}
 		}
@@ -96,7 +103,55 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 	return 0
 }
 
-func Part1Check3Links(ctx context.Context, links []string, link1 Link, link2 Link, link3 Link) bool {
+func Part1CountPaths(links []Link, link1 Link, link2 Link, link3 Link) int {
+	idxs := make([]int, 3, 3)
+	idxs[0] = slices.IndexFunc(links, func(link Link) bool {
+		return link.Same(&link1)
+	})
+	idxs[1] = slices.IndexFunc(links, func(link Link) bool {
+		return link.Same(&link2)
+	})
+	idxs[2] = slices.IndexFunc(links, func(link Link) bool {
+		return link.Same(&link3)
+	})
+	slices.Sort(idxs)
+	newLinks := append(links[0:idxs[0]], links[idxs[0]+1:idxs[1]]...)
+	newLinks = append(newLinks, links[idxs[1]+1:idxs[2]]...)
+	newLinks = append(newLinks, links[idxs[2]+1:]...)
+
+	var minSize int = 1e6
+	var maxSize int = -1e6
+	for _, link := range newLinks {
+		res := Part1CountLink(links, link)
+		if res > maxSize {
+			maxSize = res
+		}
+		if res < minSize {
+			minSize = res
+		}
+	}
+	return minSize * maxSize
+}
+
+func Part1CountLink(links []Link, link Link) int {
+	cnt := 0
+	found := true
+	for found {
+		found = false
+		for i, item := range links {
+			if item.from == link.from || item.from == link.to {
+				link = item
+				links = append(links[0:i], links[i+1:]...)
+				found = true
+				cnt++
+				break
+			}
+		}
+	}
+	return cnt
+}
+
+func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link) bool {
 	n := 3
 	res := make([]bool, n, n)
 	wg := new(sync.WaitGroup)
@@ -141,7 +196,7 @@ func Part1Check3Links(ctx context.Context, links []string, link1 Link, link2 Lin
 	return found
 }
 
-func Part1CheckOrLinks(ctx context.Context, links []string, link1 Link, link2 Link) bool {
+func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link) bool {
 	n := 2
 	res := make([]bool, n, n)
 	wg := new(sync.WaitGroup)
@@ -177,7 +232,7 @@ func Part1CheckOrLinks(ctx context.Context, links []string, link1 Link, link2 Li
 	return false
 }
 
-func Part1Find(ctx context.Context, links []string, from string, to string, cnt int) bool {
+func Part1Find(ctx context.Context, links []Link, from string, to string, cnt int) bool {
 	if cnt < 0 {
 		return false
 	}
@@ -185,16 +240,15 @@ func Part1Find(ctx context.Context, links []string, from string, to string, cnt 
 		return false
 	}
 	for i, item := range links {
-		fromTo := strings.Split(item, "/")
-		if fromTo[0] == from || fromTo[1] == from {
-			newFrom := fromTo[0]
-			if fromTo[0] == from {
-				newFrom = fromTo[1]
+		if item.from == from || item.to == from {
+			newFrom := item.from
+			if item.from == from {
+				newFrom = item.to
 			}
 			if newFrom == to {
 				return true
 			}
-			tmp := []string{}
+			tmp := []Link{}
 			tmp = append(tmp, links[0:i]...)
 			tmp = append(tmp, links[i+1:]...)
 			if Part1Find(ctx, tmp, newFrom, to, cnt-1) {
