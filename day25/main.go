@@ -173,13 +173,12 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 	wg := new(sync.WaitGroup)
 	wg.Add(n)
 
-	ll := len(links)
 	localCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = !Part1Find(ctx, links, link1.from, link1.to, ll)
+		arr[idx] = !Part1Find(ctx, links, link1.from, link1.to, []int{})
 		if !arr[idx] {
 			ctx.Done()
 		}
@@ -218,13 +217,12 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 	wg := new(sync.WaitGroup)
 	wg.Add(n)
 
-	ll := len(links)
 	localCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = Part1Find(ctx, links, link1.from, link2.from, ll) && !Part1Find(ctx, links, link1.from, link2.to, ll) && !Part1Find(ctx, links, link1.to, link2.from, ll) && Part1Find(ctx, links, link1.to, link2.to, ll)
+		arr[idx] = Part1Find(ctx, links, link1.from, link2.from, []int{}) && !Part1Find(ctx, links, link1.from, link2.to, []int{}) && !Part1Find(ctx, links, link1.to, link2.from, []int{}) && Part1Find(ctx, links, link1.to, link2.to, []int{})
 		if arr[idx] {
 			ctx.Done()
 		}
@@ -232,7 +230,7 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = Part1Find(ctx, links, link1.from, link2.to, ll) && !Part1Find(ctx, links, link1.from, link2.from, ll) && !Part1Find(ctx, links, link1.to, link2.to, ll) && Part1Find(ctx, links, link1.to, link2.from, ll)
+		arr[idx] = Part1Find(ctx, links, link1.from, link2.to, []int{}) && !Part1Find(ctx, links, link1.from, link2.from, []int{}) && !Part1Find(ctx, links, link1.to, link2.to, []int{}) && Part1Find(ctx, links, link1.to, link2.from, []int{})
 		if arr[idx] {
 			ctx.Done()
 		}
@@ -248,15 +246,12 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 	return false
 }
 
-func Part1Find(ctx context.Context, links []Link, from string, to string, cnt int) bool {
-	if cnt < 0 {
-		return false
-	}
+func Part1Find(ctx context.Context, links []Link, from string, to string, visited []int) bool {
 	if ctx.Err() != nil {
 		return false
 	}
 	for i, item := range links {
-		if item.from == from || item.to == from {
+		if (item.from == from || item.to == from) && !slices.Contains(visited, i) {
 			newFrom := item.from
 			if item.from == from {
 				newFrom = item.to
@@ -264,10 +259,8 @@ func Part1Find(ctx context.Context, links []Link, from string, to string, cnt in
 			if newFrom == to {
 				return true
 			}
-			tmp := []Link{}
-			tmp = append(tmp, links[0:i]...)
-			tmp = append(tmp, links[i+1:]...)
-			if Part1Find(ctx, tmp, newFrom, to, cnt-1) {
+			newVisited := append(visited, i)
+			if Part1Find(ctx, links, newFrom, to, newVisited) {
 				return true
 			}
 		}
