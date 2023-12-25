@@ -173,16 +173,13 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 	wg := new(sync.WaitGroup)
 	wg.Add(n)
 
-	localCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
 		arr[idx] = !Part1Find(ctx, links, link1.from, link1.to, []int{})
 		if !arr[idx] {
 			ctx.Done()
 		}
-	}(localCtx, 0, res)
+	}(ctx, 0, res)
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
@@ -190,7 +187,7 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 		if !arr[idx] {
 			ctx.Done()
 		}
-	}(localCtx, 1, res)
+	}(ctx, 1, res)
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
@@ -198,7 +195,7 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 		if !arr[idx] {
 			ctx.Done()
 		}
-	}(localCtx, 2, res)
+	}(ctx, 2, res)
 
 	wg.Wait()
 	found := true
@@ -217,16 +214,13 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 	wg := new(sync.WaitGroup)
 	wg.Add(n)
 
-	localCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
 		arr[idx] = Part1Find(ctx, links, link1.from, link2.from, []int{}) && !Part1Find(ctx, links, link1.from, link2.to, []int{}) && !Part1Find(ctx, links, link1.to, link2.from, []int{}) && Part1Find(ctx, links, link1.to, link2.to, []int{})
 		if arr[idx] {
 			ctx.Done()
 		}
-	}(localCtx, 0, res)
+	}(ctx, 0, res)
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
@@ -234,7 +228,7 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 		if arr[idx] {
 			ctx.Done()
 		}
-	}(localCtx, 1, res)
+	}(ctx, 1, res)
 
 	wg.Wait()
 
