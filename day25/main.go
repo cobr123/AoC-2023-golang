@@ -66,57 +66,86 @@ func Part1GetMult(scanner *bufio.Scanner) int {
 			links[i] = Link{links[i].to, links[i].from}
 		}
 	}
-	ll := len(links)
-	for i := 0; i < ll-2; i++ {
-		link1 := links[i]
-		fmt.Println("checking", link1, i, ll-2)
-		for j := i + 1; j < ll-1; j++ {
-			link2 := links[j]
-			for k := j + 1; k < ll; k++ {
-				link3 := links[k]
-				n := 3
-				res := make([]bool, n, n)
-				wg := new(sync.WaitGroup)
-				wg.Add(n)
+	queue := make(chan Job)
+	pathCounts := make(chan int)
+	for i := 0; i < 3; i++ {
+		go func(links []Link, initLinks []Link, in <-chan Job, out chan<- int) {
+			for job := range in {
+				out <- Part1CheckLinks(links, initLinks, job)
+			}
+		}(links, initLinks, queue, pathCounts)
+	}
 
-				tmp := []Link{}
-				tmp = append(tmp, links[0:i]...)
-				tmp = append(tmp, links[i+1:j]...)
-				tmp = append(tmp, links[j+1:k]...)
-				tmp = append(tmp, links[k+1:]...)
-				ctx := context.Background()
-
-				go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
-					defer wg.Done()
-					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
-				}(ctx, tmp, link1, link2, link3, wg, 0, res)
-
-				go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
-					defer wg.Done()
-					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
-				}(ctx, tmp, link2, link3, link1, wg, 1, res)
-
-				go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
-					defer wg.Done()
-					arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
-				}(ctx, tmp, link3, link1, link2, wg, 2, res)
-
-				wg.Wait()
-				found := true
-				for _, item := range res {
-					if !item {
-						found = false
-						break
-					}
-				}
-				if found {
-					fmt.Println("found", link1, link2, link3)
-					return Part1CountPaths(initLinks, link1, link2, link3)
+	go func(links []Link, queue chan Job) {
+		ll := len(links)
+		for i := 0; i < ll-2; i++ {
+			fmt.Println("checking", links[i], i, ll)
+			for j := i + 1; j < ll-1; j++ {
+				for k := j + 1; k < ll; k++ {
+					queue <- Job{i, j, k}
 				}
 			}
 		}
+	}(links, queue)
+	for cnt := range pathCounts {
+		if cnt > 0 {
+			return cnt
+		}
 	}
 	return 0
+}
+
+type Job struct {
+	i int
+	j int
+	k int
+}
+
+func Part1CheckLinks(links []Link, initLinks []Link, job Job) int {
+	link1 := links[job.i]
+	link2 := links[job.j]
+	link3 := links[job.k]
+	n := 3
+	res := make([]bool, n, n)
+	wg := new(sync.WaitGroup)
+	wg.Add(n)
+
+	tmp := []Link{}
+	tmp = append(tmp, links[0:job.i]...)
+	tmp = append(tmp, links[job.i+1:job.j]...)
+	tmp = append(tmp, links[job.j+1:job.k]...)
+	tmp = append(tmp, links[job.k+1:]...)
+	ctx := context.Background()
+
+	go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
+		defer wg.Done()
+		arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
+	}(ctx, tmp, link1, link2, link3, wg, 0, res)
+
+	go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
+		defer wg.Done()
+		arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
+	}(ctx, tmp, link2, link3, link1, wg, 1, res)
+
+	go func(ctx context.Context, links []Link, link1 Link, link2 Link, link3 Link, wg *sync.WaitGroup, idx int, arr []bool) {
+		defer wg.Done()
+		arr[idx] = Part1Check3Links(ctx, links, link1, link2, link3)
+	}(ctx, tmp, link3, link1, link2, wg, 2, res)
+
+	wg.Wait()
+	found := true
+	for _, item := range res {
+		if !item {
+			found = false
+			break
+		}
+	}
+	if found {
+		fmt.Println("found", link1, link2, link3)
+		return Part1CountPaths(initLinks, link1, link2, link3)
+	} else {
+		return 0
+	}
 }
 
 func Part1CountPaths(links []Link, link1 Link, link2 Link, link3 Link) int {
@@ -175,7 +204,7 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = !Part1Find(ctx, links, link1.from, link1.to, []int{})
+		arr[idx] = !Part1PathExists(ctx, links, link1.from, link1.to, []int{})
 		if !arr[idx] {
 			ctx.Done()
 		}
@@ -183,7 +212,7 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = Part1CheckOrLinks(ctx, links, link1, link2)
+		arr[idx] = Part1OneOfPathsExists(ctx, links, link1, link2)
 		if !arr[idx] {
 			ctx.Done()
 		}
@@ -191,7 +220,7 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = Part1CheckOrLinks(ctx, links, link1, link3)
+		arr[idx] = Part1OneOfPathsExists(ctx, links, link1, link3)
 		if !arr[idx] {
 			ctx.Done()
 		}
@@ -208,7 +237,7 @@ func Part1Check3Links(ctx context.Context, links []Link, link1 Link, link2 Link,
 	return found
 }
 
-func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link) bool {
+func Part1OneOfPathsExists(ctx context.Context, links []Link, link1 Link, link2 Link) bool {
 	n := 2
 	res := make([]bool, n, n)
 	wg := new(sync.WaitGroup)
@@ -216,7 +245,7 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = Part1Find(ctx, links, link1.from, link2.from, []int{}) && !Part1Find(ctx, links, link1.from, link2.to, []int{}) && !Part1Find(ctx, links, link1.to, link2.from, []int{}) && Part1Find(ctx, links, link1.to, link2.to, []int{})
+		arr[idx] = Part1PathExists(ctx, links, link1.from, link2.from, []int{}) && !Part1PathExists(ctx, links, link1.from, link2.to, []int{}) && !Part1PathExists(ctx, links, link1.to, link2.from, []int{}) && Part1PathExists(ctx, links, link1.to, link2.to, []int{})
 		if arr[idx] {
 			ctx.Done()
 		}
@@ -224,7 +253,7 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 
 	go func(ctx context.Context, idx int, arr []bool) {
 		defer wg.Done()
-		arr[idx] = Part1Find(ctx, links, link1.from, link2.to, []int{}) && !Part1Find(ctx, links, link1.from, link2.from, []int{}) && !Part1Find(ctx, links, link1.to, link2.to, []int{}) && Part1Find(ctx, links, link1.to, link2.from, []int{})
+		arr[idx] = Part1PathExists(ctx, links, link1.from, link2.to, []int{}) && !Part1PathExists(ctx, links, link1.from, link2.from, []int{}) && !Part1PathExists(ctx, links, link1.to, link2.to, []int{}) && Part1PathExists(ctx, links, link1.to, link2.from, []int{})
 		if arr[idx] {
 			ctx.Done()
 		}
@@ -240,7 +269,7 @@ func Part1CheckOrLinks(ctx context.Context, links []Link, link1 Link, link2 Link
 	return false
 }
 
-func Part1Find(ctx context.Context, links []Link, from string, to string, visited []int) bool {
+func Part1PathExists(ctx context.Context, links []Link, from string, to string, visited []int) bool {
 	if ctx.Err() != nil {
 		return false
 	}
@@ -254,7 +283,7 @@ func Part1Find(ctx context.Context, links []Link, from string, to string, visite
 				return true
 			}
 			newVisited := append(visited, i)
-			if Part1Find(ctx, links, newFrom, to, newVisited) {
+			if Part1PathExists(ctx, links, newFrom, to, newVisited) {
 				return true
 			}
 		}
